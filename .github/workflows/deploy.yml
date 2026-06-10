@@ -1,0 +1,44 @@
+name: Deploy on PR Merge
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      # 👷 Construye el proyecto en GitHub Actions
+      - name: Build frontend
+        run: |
+          export NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+          export NEXT_PUBLIC_TIMEOUT=${{ secrets.NEXT_PUBLIC_TIMEOUT }}
+          yarn install --frozen-lockfile
+          yarn build
+
+      # 📦 Sube el build al servidor EC2
+      - name: Upload build to EC2
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: ".next,public,package.json"
+          target: "/home/ubuntu/planifica-frontend"
+
+      # 🚀 Reinicia la app en EC2 con PM2
+      - name: Restart app on EC2
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/planifica-frontend
+            yarn install --production
+            pm2 restart frontend || pm2 start npm --name frontend -- start
