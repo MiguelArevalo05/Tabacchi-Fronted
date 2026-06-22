@@ -1,5 +1,5 @@
-import UsersManagement from "@/app/components/templates/users-management";
+import { redirect } from "next/navigation";
 
-export default function UsersPage() {
-    return <UsersManagement />;
+export default function DashboardUsersRedirectPage() {
+  redirect("/admin/usuarios");
 }
