@@ -19,6 +19,7 @@ import {
   X,
   ChevronDown,
   ExternalLink,
+  Link2,
 } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -70,6 +71,13 @@ const menuItems: MenuItem[] = [
         path: "/dashboard/ecommerce-orders",
         title: "Órdenes",
         icon: <ShoppingBag className="w-4 h-4" />,
+        module: "order",
+        action: "read",
+      },
+      {
+        path: "/dashboard/blockchain",
+        title: "Blockchain",
+        icon: <Link2 className="w-4 h-4" />,
         module: "order",
         action: "read",
       },

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Edit, Plus, Trash2, Wrench } from "lucide-react";
 
 import { Toast } from "@/components/ui/toast";
@@ -20,18 +20,23 @@ import {
   AdminBtnSecondary,
   AdminModal,
 } from "@/app/dashboard/components/AdminModal";
+import { AdminAvailabilityToggle } from "@/app/dashboard/components/AdminAvailabilityToggle";
+import { ServiceAvailabilityField } from "@/app/dashboard/components/ServiceAvailabilityField";
 import { getUploadImageUrl } from "@/lib/utils";
 import {
   createService,
   deleteService,
   getServicesAdmin,
   updateService,
+  updateServiceAvailability,
 } from "@/services/serviceOfferingService";
 import type { ServiceFormData, ServiceOffering } from "@/types/ecommerce";
+import { formatPrice } from "@/types/ecommerce";
 
 const emptyForm: ServiceFormData = {
   name: "",
   description: "",
+  price: 0,
   displayOrder: 0,
   isActive: true,
 };
@@ -51,24 +56,24 @@ export default function CatalogServicesPage() {
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  const fetchServices = async () => {
+  const fetchServices = useCallback(async (currentSearch: string) => {
     try {
       setLoading(true);
-      const res = await getServicesAdmin({ search, limit: 50 });
+      const res = await getServicesAdmin({ search: currentSearch, limit: 50 });
       setServices(res.data);
     } catch {
       setToast({ type: "error", message: "Error al cargar servicios." });
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchServices();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    fetchServices(search);
+  }, [search, fetchServices]);
 
   const resetImageState = () => {
     setImageFile(null);
@@ -87,6 +92,7 @@ export default function CatalogServicesPage() {
     setForm({
       name: service.name,
       description: service.description ?? "",
+      price: Number(service.price),
       displayOrder: service.displayOrder,
       isActive: service.isActive,
     });
@@ -127,19 +133,44 @@ export default function CatalogServicesPage() {
     setSaving(true);
     try {
       if (editingId) {
-        await updateService(editingId, form, imageFile);
+        const updated = await updateService(editingId, form, imageFile);
+        setServices((prev) =>
+          prev.map((s) =>
+            s.id === editingId ? { ...s, ...updated } : s
+          )
+        );
+
         setToast({ type: "success", message: "Servicio actualizado." });
       } else {
         await createService(form, imageFile!);
         setToast({ type: "success", message: "Servicio creado." });
       }
+
       setShowModal(false);
       resetImageState();
-      fetchServices();
+      fetchServices(search);
     } catch {
       setToast({ type: "error", message: "Error al guardar el servicio." });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleToggleAvailability = async (service: ServiceOffering) => {
+    setTogglingId(service.id);
+    try {
+      const updated = await updateServiceAvailability(service.id, !service.isActive);
+      setServices((prev) =>
+        prev.map((s) => (s.id === service.id ? { ...s, ...updated } : s))
+      );
+      setToast({
+        type: "success",
+        message: updated.isActive ? "Servicio disponible." : "Servicio oculto en tienda.",
+      });
+    } catch {
+      setToast({ type: "error", message: "No se pudo cambiar la disponibilidad." });
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -148,7 +179,7 @@ export default function CatalogServicesPage() {
       await deleteService(id);
       setDeleteId(null);
       setToast({ type: "success", message: "Servicio eliminado." });
-      fetchServices();
+      fetchServices(search);
     } catch {
       setToast({ type: "error", message: "Error al eliminar." });
     }
@@ -163,7 +194,7 @@ export default function CatalogServicesPage() {
       <AdminPageHeader
         icon={Wrench}
         title="Servicios"
-        description="Servicios mostrados en la landing pública"
+        description="Nombre, descripción, precio, imagen y disponibilidad"
         actions={
           <button
             type="button"
@@ -178,7 +209,7 @@ export default function CatalogServicesPage() {
       <AdminSearchBar
         value={search}
         onChange={setSearch}
-        onSearch={fetchServices}
+        onSearch={() => fetchServices(search)}
         placeholder="Buscar servicios..."
       />
 
@@ -188,6 +219,7 @@ export default function CatalogServicesPage() {
             <tr>
               <AdminTh>Imagen</AdminTh>
               <AdminTh>Nombre</AdminTh>
+              <AdminTh>Precio</AdminTh>
               <AdminTh>Orden</AdminTh>
               <AdminTh>Estado</AdminTh>
               <AdminTh align="right">Acciones</AdminTh>
@@ -195,9 +227,9 @@ export default function CatalogServicesPage() {
           </AdminTableHead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
-              <AdminEmptyState message="Cargando servicios..." colSpan={5} />
+              <AdminEmptyState message="Cargando servicios..." colSpan={6} />
             ) : services.length === 0 ? (
-              <AdminEmptyState message="No hay servicios registrados" colSpan={5} />
+              <AdminEmptyState message="No hay servicios registrados" colSpan={6} />
             ) : (
               services.map((s) => {
                 const img = getUploadImageUrl(s.imageUrl);
@@ -216,11 +248,14 @@ export default function CatalogServicesPage() {
                       <p className="font-medium text-slate-900">{s.name}</p>
                       <p className="text-slate-500 text-xs truncate max-w-xs mt-0.5">{s.description}</p>
                     </td>
+                    <td className="px-4 py-3.5 font-medium text-slate-900">{formatPrice(s.price)}</td>
                     <td className="px-4 py-3.5 text-slate-700">{s.displayOrder}</td>
                     <td className="px-4 py-3.5">
-                      <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${s.isActive ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200" : "bg-slate-100 text-slate-500"}`}>
-                        {s.isActive ? "Activo" : "Inactivo"}
-                      </span>
+                      <AdminAvailabilityToggle
+                        isActive={s.isActive}
+                        loading={togglingId === s.id}
+                        onToggle={() => handleToggleAvailability(s)}
+                      />
                     </td>
                     <td className="px-4 py-3.5 text-right">
                       <button type="button" onClick={() => openEdit(s)} className="p-2 text-blue-700 hover:bg-blue-50 rounded-lg transition-colors">
@@ -240,6 +275,7 @@ export default function CatalogServicesPage() {
 
       {showModal && (
         <AdminModal
+          key={editingId ?? "new"}
           title={editingId ? "Editar servicio" : "Nuevo servicio"}
           onClose={() => setShowModal(false)}
           footer={
@@ -256,6 +292,7 @@ export default function CatalogServicesPage() {
             {[
               { key: "name", label: "Nombre", type: "text" },
               { key: "description", label: "Descripción", type: "text" },
+              { key: "price", label: "Precio (S/)", type: "number" },
               { key: "displayOrder", label: "Orden de visualización", type: "number" },
             ].map((f) => (
               <div key={f.key}>
@@ -271,6 +308,7 @@ export default function CatalogServicesPage() {
                   }
                   className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
                   required={f.key === "name"}
+                  step={f.key === "price" ? "0.01" : undefined}
                 />
               </div>
             ))}
@@ -293,14 +331,10 @@ export default function CatalogServicesPage() {
               )}
             </div>
 
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.isActive ?? true}
-                onChange={(e) => setForm((p) => ({ ...p, isActive: e.target.checked }))}
-              />
-              Servicio activo
-            </label>
+            <ServiceAvailabilityField
+              value={form.isActive ?? true}
+              onChange={(isActive) => setForm((p) => ({ ...p, isActive }))}
+            />
 
           </form>
         </AdminModal>

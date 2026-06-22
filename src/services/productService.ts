@@ -53,6 +53,16 @@ export const updateProduct = async (
   return response.data;
 };
 
+export const updateProductAvailability = async (
+  id: string,
+  isActive: boolean
+): Promise<Product> => {
+  const response = await api.patch<Product>(`${API_URL}/${id}/availability`, {
+    isActive,
+  });
+  return response.data;
+};
+
 export const deleteProduct = async (id: string): Promise<void> => {
   await api.delete(`${API_URL}/${id}`);
 };

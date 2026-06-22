@@ -59,3 +59,7 @@ export const updateOrderStatus = async (
   );
   return response.data;
 };
+
+export const deleteOrder = async (id: string): Promise<void> => {
+  await api.delete(`${API_URL}/${id}`);
+};

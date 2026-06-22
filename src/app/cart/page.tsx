@@ -12,7 +12,7 @@ import { Toast } from "@/components/ui/toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import { getUploadImageUrl } from "@/lib/utils";
-import { formatPrice } from "@/types/ecommerce";
+import { formatPrice, getCartLineItem } from "@/types/ecommerce";
 
 export default function CartPage() {
   const { user, loading: authLoading } = useAuth();
@@ -39,8 +39,8 @@ export default function CartPage() {
     setUpdating(itemId);
     const ok = await removeItem(itemId);
     setUpdating(null);
-    if (ok) setToast({ type: "success", message: "Producto eliminado del carrito." });
-    else setToast({ type: "error", message: "No se pudo eliminar el producto." });
+    if (ok) setToast({ type: "success", message: "Item eliminado del carrito." });
+    else setToast({ type: "error", message: "No se pudo eliminar el item." });
   };
 
   if (authLoading || !user) {
@@ -67,81 +67,92 @@ export default function CartPage() {
           <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">
             <p className="text-slate-600 mb-6">Tu carrito está vacío.</p>
             <Button asChild className="bg-blue-700 hover:bg-blue-800">
-              <Link href="/landing#productos">Ver productos</Link>
+              <Link href="/landing#productos">Ver catálogo</Link>
             </Button>
           </div>
         ) : (
           <div className="grid lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-4">
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  className="bg-white rounded-2xl border border-slate-100 p-4 flex gap-4 items-center"
-                >
-                  <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-slate-100 shrink-0">
-                    {getUploadImageUrl(item.product.imageUrl) ? (
-                      <Image
-                        src={getUploadImageUrl(item.product.imageUrl)!}
-                        alt={item.product.name}
-                        fill
-                        className="object-cover"
-                        sizes="80px"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">
-                        Sin imagen
+              {items.map((item) => {
+                const line = getCartLineItem(item);
+                if (!line) return null;
+
+                return (
+                  <div
+                    key={item.id}
+                    className="bg-white rounded-2xl border border-slate-100 p-4 flex gap-4 items-center"
+                  >
+                    <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-slate-100 shrink-0">
+                      {getUploadImageUrl(line.imageUrl) ? (
+                        <Image
+                          src={getUploadImageUrl(line.imageUrl)!}
+                          alt={line.name}
+                          fill
+                          className="object-cover"
+                          sizes="80px"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">
+                          Sin imagen
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="inline-flex px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-semibold text-slate-600 mb-1">
+                        {line.label}
+                      </span>
+                      <h3 className="font-semibold text-slate-900 truncate">
+                        {line.name}
+                      </h3>
+                      <p className="text-blue-700 font-medium">
+                        {formatPrice(line.price)}
+                      </p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => handleQuantity(item.id, item.quantity - 1)}
+                          disabled={updating === item.id || item.quantity <= 1}
+                          className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 disabled:opacity-50"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </button>
+                        <span className="w-8 text-center font-medium">{item.quantity}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleQuantity(item.id, item.quantity + 1)}
+                          disabled={
+                            updating === item.id ||
+                            (line.stockLimit !== null && item.quantity >= line.stockLimit)
+                          }
+                          className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 disabled:opacity-50"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
                       </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-slate-900 truncate">
-                      {item.product.name}
-                    </h3>
-                    <p className="text-blue-700 font-medium">
-                      {formatPrice(item.product.price)}
-                    </p>
-                    <div className="flex items-center gap-2 mt-2">
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-slate-900">
+                        {formatPrice(Number(line.price) * item.quantity)}
+                      </p>
                       <button
                         type="button"
-                        onClick={() => handleQuantity(item.id, item.quantity - 1)}
-                        disabled={updating === item.id || item.quantity <= 1}
-                        className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 disabled:opacity-50"
+                        onClick={() => handleRemove(item.id)}
+                        disabled={updating === item.id}
+                        className="mt-2 text-red-500 hover:text-red-700 p-1"
+                        aria-label="Eliminar"
                       >
-                        <Minus className="w-4 h-4" />
-                      </button>
-                      <span className="w-8 text-center font-medium">{item.quantity}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleQuantity(item.id, item.quantity + 1)}
-                        disabled={updating === item.id || item.quantity >= item.product.stock}
-                        className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 disabled:opacity-50"
-                      >
-                        <Plus className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-slate-900">
-                      {formatPrice(Number(item.product.price) * item.quantity)}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => handleRemove(item.id)}
-                      disabled={updating === item.id}
-                      className="mt-2 text-red-500 hover:text-red-700 p-1"
-                      aria-label="Eliminar"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="bg-white rounded-2xl border border-slate-100 p-6 h-fit">
               <h2 className="text-lg font-semibold text-slate-900 mb-4">Resumen</h2>
               <div className="flex justify-between text-slate-600 mb-2">
-                <span>Productos ({cart?.itemCount})</span>
+                <span>Items ({cart?.itemCount})</span>
                 <span>{formatPrice(cart?.total ?? 0)}</span>
               </div>
               <div className="border-t border-slate-100 pt-4 mt-4 flex justify-between font-bold text-lg">

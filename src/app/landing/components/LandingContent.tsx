@@ -17,14 +17,17 @@ import {
   BadgeCheck,
   Star,
   Headphones,
-  ArrowRight,
   CheckCircle2,
   ShoppingCart,
+  Wrench,
+  Package,
   type LucideIcon,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
+import { CatalogAvailabilityBadge } from "@/components/catalog/CatalogAvailabilityBadge";
+import { ServiceAvailabilityBadge } from "@/components/catalog/ServiceAvailabilityBadge";
 import StoreHeader from "@/app/landing/components/StoreHeader";
 import { Button } from "@/components/ui/button";
 import { Toast } from "@/components/ui/toast";
@@ -34,7 +37,13 @@ import { getProducts } from "@/services/productService";
 import { getServices } from "@/services/serviceOfferingService";
 import type { Product, ServiceOffering } from "@/types/ecommerce";
 import { getUploadImageUrl } from "@/lib/utils";
-import { formatPrice } from "@/types/ecommerce";
+import {
+  CATALOG_AVAILABILITY_CONFIG,
+  formatPrice,
+  isProductPurchasable,
+  isServicePurchasable,
+  SERVICE_AVAILABILITY_CONFIG,
+} from "@/types/ecommerce";
 import {
   Carousel,
   CarouselContent,
@@ -196,7 +205,7 @@ function SectionHeading({
 export default function LandingContent() {
   const router = useRouter();
   const { user } = useAuth();
-  const { addToCart } = useCart();
+  const { addToCart, addServiceToCart } = useCart();
   const [services, setServices] = useState<ServiceOffering[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
@@ -224,11 +233,26 @@ export default function LandingContent() {
       router.push("/login?redirect=/landing");
       return;
     }
-    setAddingId(productId);
+    setAddingId(`product-${productId}`);
     const ok = await addToCart(productId, 1);
     setAddingId(null);
     if (ok) {
       setToast({ type: "success", message: "Producto agregado al carrito." });
+    } else {
+      setToast({ type: "error", message: "No se pudo agregar al carrito." });
+    }
+  };
+
+  const handleAddServiceToCart = async (serviceId: string) => {
+    if (!user) {
+      router.push("/login?redirect=/landing");
+      return;
+    }
+    setAddingId(`service-${serviceId}`);
+    const ok = await addServiceToCart(serviceId, 1);
+    setAddingId(null);
+    if (ok) {
+      setToast({ type: "success", message: "Servicio agregado al carrito." });
     } else {
       setToast({ type: "error", message: "No se pudo agregar al carrito." });
     }
@@ -359,7 +383,7 @@ export default function LandingContent() {
           <SectionHeading
             badge="Nuestros servicios"
             title="Encuentra lo que necesitas"
-            subtitle="Explora nuestras soluciones y elige el tratamiento exacto que tu espacio requiere."
+            subtitle="Contrata servicios profesionales con precio definido. Disponibles o no según el panel de administración."
           />
 
           {loadingCatalog ? (
@@ -367,49 +391,56 @@ export default function LandingContent() {
           ) : services.length === 0 ? (
             <p className="text-center text-slate-500">No hay servicios disponibles por el momento.</p>
           ) : (
-            <div className="grid sm:grid-cols-2 gap-6 lg:gap-8">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {services.map((service, index) => {
                 const Icon = SERVICE_ICONS[index % SERVICE_ICONS.length];
                 const image = getUploadImageUrl(service.imageUrl) || FALLBACK_IMAGES[index % FALLBACK_IMAGES.length];
+                const addingKey = `service-${service.id}`;
                 return (
                   <article
                     key={service.id}
-                    className="group relative bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300"
+                    className="bg-gradient-to-br from-violet-50/80 to-white rounded-2xl border border-violet-100 shadow-sm hover:shadow-lg hover:border-violet-200 transition-all overflow-hidden flex flex-col ring-1 ring-violet-50"
                   >
-                    <div className="relative aspect-[16/9] overflow-hidden">
+                    <div className="relative aspect-[5/3] overflow-hidden bg-violet-100/50">
                       <Image
                         src={image}
                         alt={service.name}
                         fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-500"
-                        sizes="(max-width: 768px) 100vw, 50vw"
+                        className="object-cover"
+                        sizes="(max-width: 768px) 50vw, 25vw"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent" />
-                      {index === 0 && (
-                        <span className="absolute top-4 left-4 px-3 py-1 rounded-full bg-yellow-400 text-slate-900 text-xs font-bold uppercase tracking-wide">
-                          Más solicitado
-                        </span>
-                      )}
-                      <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
-                        <div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
-                          <Icon className="w-5 h-5 text-white" />
-                        </div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-violet-950/30 to-transparent" />
+                      <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-violet-600 text-white shadow-sm">
+                        <Wrench className="w-3.5 h-3.5" />
+                        Servicio
+                      </span>
+                      <div className="absolute bottom-3 right-3 w-9 h-9 rounded-lg bg-white/90 backdrop-blur-sm flex items-center justify-center">
+                        <Icon className="w-4 h-4 text-violet-700" />
                       </div>
                     </div>
-                    <div className="p-6">
-                      <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-blue-700 transition-colors">
-                        {service.name}
-                      </h3>
-                      <p className="text-slate-600 text-sm leading-relaxed mb-4">
+                    <div className="p-5 flex flex-col flex-1">
+                      <h3 className="font-bold text-slate-900 mb-1">{service.name}</h3>
+                      <p className="text-sm text-slate-500 line-clamp-2 mb-3 flex-1">
                         {service.description}
                       </p>
-                      <a
-                        href="#contacto"
-                        className="inline-flex items-center gap-1 text-sm font-semibold text-blue-700 hover:gap-2 transition-all"
+                      <div className="flex items-center justify-between mt-auto gap-2">
+                        <span className="text-lg font-bold text-violet-700">
+                          {formatPrice(service.price)}
+                        </span>
+                        <ServiceAvailabilityBadge item={service} />
+                      </div>
+                      <Button
+                        className="w-full mt-4 bg-violet-600 hover:bg-violet-700"
+                        disabled={!isServicePurchasable(service) || addingId === addingKey}
+                        onClick={() => handleAddServiceToCart(service.id)}
                       >
-                        Solicitar cotización
-                        <ArrowRight className="w-4 h-4" />
-                      </a>
+                        <ShoppingCart className="w-4 h-4" />
+                        {addingId === addingKey
+                          ? "Agregando..."
+                          : isServicePurchasable(service)
+                            ? "Agregar al carrito"
+                            : SERVICE_AVAILABILITY_CONFIG.unavailable.label}
+                      </Button>
                     </div>
                   </article>
                 );
@@ -434,48 +465,59 @@ export default function LandingContent() {
             <p className="text-center text-slate-500">No hay productos disponibles por el momento.</p>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {products.map((product) => (
-                <article
-                  key={product.id}
-                  className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg transition-all overflow-hidden flex flex-col"
-                >
-                  <div className="relative aspect-square bg-slate-100">
-                    {getUploadImageUrl(product.imageUrl) ? (
-                      <Image
-                        src={getUploadImageUrl(product.imageUrl)!}
-                        alt={product.name}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 50vw, 25vw"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">
-                        Sin imagen
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-5 flex flex-col flex-1">
-                    <h3 className="font-bold text-slate-900 mb-1">{product.name}</h3>
-                    <p className="text-sm text-slate-500 line-clamp-2 mb-3 flex-1">
-                      {product.description}
-                    </p>
-                    <div className="flex items-center justify-between mt-auto">
-                      <span className="text-lg font-bold text-blue-700">
-                        {formatPrice(product.price)}
+              {products.map((product) => {
+                const addingKey = `product-${product.id}`;
+                return (
+                  <article
+                    key={product.id}
+                    className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg hover:border-blue-200 transition-all overflow-hidden flex flex-col"
+                  >
+                    <div className="relative aspect-square bg-slate-100">
+                      {getUploadImageUrl(product.imageUrl) ? (
+                        <Image
+                          src={getUploadImageUrl(product.imageUrl)!}
+                          alt={product.name}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 768px) 50vw, 25vw"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">
+                          Sin imagen
+                        </div>
+                      )}
+                      <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-700 text-white shadow-sm">
+                        <Package className="w-3.5 h-3.5" />
+                        Producto
                       </span>
-                      <span className="text-xs text-slate-400">Stock: {product.stock}</span>
                     </div>
-                    <Button
-                      className="w-full mt-4 bg-blue-700 hover:bg-blue-800"
-                      disabled={product.stock < 1 || addingId === product.id}
-                      onClick={() => handleAddToCart(product.id)}
-                    >
-                      <ShoppingCart className="w-4 h-4" />
-                      {addingId === product.id ? "Agregando..." : "Agregar al carrito"}
-                    </Button>
-                  </div>
-                </article>
-              ))}
+                    <div className="p-5 flex flex-col flex-1">
+                      <h3 className="font-bold text-slate-900 mb-1">{product.name}</h3>
+                      <p className="text-sm text-slate-500 line-clamp-2 mb-3 flex-1">
+                        {product.description}
+                      </p>
+                      <div className="flex items-center justify-between mt-auto gap-2">
+                        <span className="text-lg font-bold text-blue-700">
+                          {formatPrice(product.price)}
+                        </span>
+                        <CatalogAvailabilityBadge item={product} mode="store" />
+                      </div>
+                      <Button
+                        className="w-full mt-4 bg-blue-700 hover:bg-blue-800"
+                        disabled={!isProductPurchasable(product) || addingId === addingKey}
+                        onClick={() => handleAddToCart(product.id)}
+                      >
+                        <ShoppingCart className="w-4 h-4" />
+                        {addingId === addingKey
+                          ? "Agregando..."
+                          : isProductPurchasable(product)
+                            ? "Agregar al carrito"
+                            : CATALOG_AVAILABILITY_CONFIG.out_of_stock.label}
+                      </Button>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           )}
         </div>

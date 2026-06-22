@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Cart } from "@/types/ecommerce";
+import { CartItemType } from "@/types/ecommerce";
 import * as cartService from "@/services/cartService";
 import { useAuth } from "./AuthContext";
 
@@ -17,6 +18,7 @@ interface CartContextType {
   loading: boolean;
   refreshCart: () => Promise<void>;
   addToCart: (productId: string, quantity?: number) => Promise<boolean>;
+  addServiceToCart: (serviceId: string, quantity?: number) => Promise<boolean>;
   updateQuantity: (itemId: string, quantity: number) => Promise<boolean>;
   removeItem: (itemId: string) => Promise<boolean>;
   clearCart: () => Promise<boolean>;
@@ -61,7 +63,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addToCart = async (productId: string, quantity = 1) => {
     try {
-      const data = await cartService.addCartItem({ productId, quantity });
+      const data = await cartService.addCartItem({
+        itemType: CartItemType.PRODUCT,
+        productId,
+        quantity,
+      });
+      setCart(data);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const addServiceToCart = async (serviceId: string, quantity = 1) => {
+    try {
+      const data = await cartService.addCartItem({
+        itemType: CartItemType.SERVICE,
+        serviceId,
+        quantity,
+      });
       setCart(data);
       return true;
     } catch {
@@ -106,6 +126,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         loading,
         refreshCart,
         addToCart,
+        addServiceToCart,
         updateQuantity,
         removeItem,
         clearCart,
