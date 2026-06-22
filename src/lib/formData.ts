@@ -30,6 +30,7 @@ export function buildServiceFormData(
   const formData = new FormData();
   appendField(formData, "name", data.name);
   appendField(formData, "description", data.description);
+  appendField(formData, "price", data.price);
   appendField(formData, "displayOrder", data.displayOrder);
   appendField(formData, "isActive", data.isActive);
   if (image) formData.append("image", image);

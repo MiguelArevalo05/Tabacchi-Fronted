@@ -53,6 +53,17 @@ export const updateService = async (
   return response.data;
 };
 
+export const updateServiceAvailability = async (
+  id: string,
+  isActive: boolean
+): Promise<ServiceOffering> => {
+  const response = await api.patch<ServiceOffering>(
+    `${API_URL}/${id}/availability`,
+    { isActive }
+  );
+  return response.data;
+};
+
 export const deleteService = async (id: string): Promise<void> => {
   await api.delete(`${API_URL}/${id}`);
 };

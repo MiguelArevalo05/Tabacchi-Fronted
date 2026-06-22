@@ -20,12 +20,15 @@ import {
   AdminBtnSecondary,
   AdminModal,
 } from "@/app/dashboard/components/AdminModal";
+import { AdminAvailabilityToggle } from "@/app/dashboard/components/AdminAvailabilityToggle";
+import { ProductAvailabilityField } from "@/app/dashboard/components/ProductAvailabilityField";
 import { getUploadImageUrl } from "@/lib/utils";
 import {
   createProduct,
   deleteProduct,
   getProductsAdmin,
   updateProduct,
+  updateProductAvailability,
 } from "@/services/productService";
 import type { Product, ProductFormData } from "@/types/ecommerce";
 import { formatPrice } from "@/types/ecommerce";
@@ -53,6 +56,7 @@ export default function ProductsAdminPage() {
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const fetchProducts = async () => {
@@ -146,6 +150,24 @@ export default function ProductsAdminPage() {
     }
   };
 
+  const handleToggleAvailability = async (product: Product) => {
+    setTogglingId(product.id);
+    try {
+      const updated = await updateProductAvailability(product.id, !product.isActive);
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, ...updated } : p))
+      );
+      setToast({
+        type: "success",
+        message: updated.isActive ? "Producto disponible." : "Producto oculto en tienda.",
+      });
+    } catch {
+      setToast({ type: "error", message: "No se pudo cambiar la disponibilidad." });
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     try {
       await deleteProduct(id);
@@ -220,9 +242,12 @@ export default function ProductsAdminPage() {
                     <td className="px-4 py-3.5 text-slate-700">{formatPrice(p.price)}</td>
                     <td className="px-4 py-3.5 text-slate-700">{p.stock}</td>
                     <td className="px-4 py-3.5">
-                      <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${p.isActive ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200" : "bg-slate-100 text-slate-500"}`}>
-                        {p.isActive ? "Activo" : "Inactivo"}
-                      </span>
+                      <AdminAvailabilityToggle
+                        isActive={p.isActive}
+                        loading={togglingId === p.id}
+                        inactiveLabel="Agotado"
+                        onToggle={() => handleToggleAvailability(p)}
+                      />
                     </td>
                     <td className="px-4 py-3.5 text-right">
                       <button type="button" onClick={() => openEdit(p)} className="p-2 text-blue-700 hover:bg-blue-50 rounded-lg transition-colors">
@@ -297,14 +322,10 @@ export default function ProductsAdminPage() {
               )}
             </div>
 
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.isActive ?? true}
-                onChange={(e) => setForm((p) => ({ ...p, isActive: e.target.checked }))}
-              />
-              Producto activo
-            </label>
+            <ProductAvailabilityField
+              value={form.isActive ?? true}
+              onChange={(isActive) => setForm((p) => ({ ...p, isActive }))}
+            />
 
           </form>
         </AdminModal>

@@ -10,7 +10,7 @@ import { Toast } from "@/components/ui/toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import { createOrder } from "@/services/ecommerceOrderService";
-import { formatPrice } from "@/types/ecommerce";
+import { formatPrice, getCartLineItem } from "@/types/ecommerce";
 
 export default function CheckoutPage() {
   const { user, loading: authLoading } = useAuth();
@@ -121,16 +121,21 @@ export default function CheckoutPage() {
           <div className="bg-white rounded-2xl border border-slate-100 p-6 h-fit">
             <h2 className="text-lg font-semibold text-slate-900 mb-4">Resumen del pedido</h2>
             <ul className="space-y-3 mb-4">
-              {cart.items.map((item) => (
-                <li key={item.id} className="flex justify-between text-sm">
-                  <span className="text-slate-600">
-                    {item.product.name} × {item.quantity}
-                  </span>
-                  <span className="font-medium">
-                    {formatPrice(Number(item.product.price) * item.quantity)}
-                  </span>
-                </li>
-              ))}
+              {cart.items.map((item) => {
+                const line = getCartLineItem(item);
+                if (!line) return null;
+
+                return (
+                  <li key={item.id} className="flex justify-between text-sm gap-3">
+                    <span className="text-slate-600">
+                      {line.name} × {item.quantity}
+                    </span>
+                    <span className="font-medium shrink-0">
+                      {formatPrice(Number(line.price) * item.quantity)}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
             <div className="border-t border-slate-100 pt-4 flex justify-between font-bold text-lg">
               <span>Total</span>
