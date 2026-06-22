@@ -1,4 +1,4 @@
-import LandingContent from "./components/LandingContent";
+import LandingContent from "@/features/landing/components/LandingContent";
 
 export default function LandingPage() {
   return <LandingContent />;

@@ -1,4 +1,4 @@
-import type { ProductFormData, ServiceFormData } from "@/types/ecommerce";
+import type { ProductFormData, ServiceFormData } from "@/features/products/types/ecommerce";
 
 function appendField(formData: FormData, key: string, value: unknown) {
   if (value === undefined || value === null) return;
