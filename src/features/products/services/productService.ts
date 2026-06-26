@@ -38,7 +38,7 @@ export const createProduct = async (
   data: ProductFormData,
   image: File
 ): Promise<Product> => {
-  const formData = buildProductFormData(data, image);
+  const formData = await buildProductFormData(data, image);
   const response = await api.post<Product>(API_URL, formData);
   return response.data;
 };
@@ -48,7 +48,7 @@ export const updateProduct = async (
   data: UpdateProductRequest,
   image?: File | null
 ): Promise<Product> => {
-  const formData = buildProductFormData(data, image);
+  const formData = await buildProductFormData(data, image);
   const response = await api.patch<Product>(`${API_URL}/${id}`, formData);
   return response.data;
 };

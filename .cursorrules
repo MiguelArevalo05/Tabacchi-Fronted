@@ -1,0 +1,63 @@
+Este proyecto utiliza arquitectura Feature-Based (Frontend modular por dominio).
+
+## Reglas de estructura
+
+- app/ SOLO contiene routing (Next.js pages/app router)
+- NO colocar lógica de negocio dentro de app/
+- La lógica de negocio debe vivir exclusivamente en features/
+- Componentes reutilizables globales deben vivir en:
+  components/ui/
+- Componentes de layout deben vivir en:
+  components/layout/
+
+## Estructura de cada feature
+
+Cada feature debe ser completamente autocontenida y seguir esta estructura:
+
+features/
+  {feature}/
+    components/
+    hooks/
+    services/
+    types/
+
+Opcional (solo si es necesario):
+- utils/
+- constants/
+- store/
+
+## Reglas de desarrollo
+
+- Mantener features independientes entre sí
+- Evitar dependencias cruzadas innecesarias entre features
+- No duplicar lógica entre features, reutilizar cuando sea posible
+- No crear nuevas carpetas fuera de la estructura definida
+
+## Reglas para pages (app/)
+
+- Las páginas deben ser lo más ligeras posible
+- No contener lógica compleja de negocio
+- Solo deben:
+  - renderizar componentes
+  - conectar features
+  - manejar layout básico
+
+## Reutilización
+
+Antes de crear código nuevo:
+
+1. Analizar estructura existente
+2. Buscar componentes reutilizables en components/ui o features existentes
+3. Evitar duplicación de lógica, hooks o servicios
+4. Mantener consistencia con el estilo del proyecto
+
+## Reglas de calidad
+
+- Usar TypeScript estricto
+- Tipar absolutamente todo (evitar any)
+- Mantener código limpio y legible
+- Separar UI, lógica y servicios correctamente
+
+## Regla final
+
+Si existe una implementación previa o patrón similar, SIEMPRE reutilizar antes de crear algo nuevo.

@@ -38,7 +38,7 @@ export const createService = async (
   data: ServiceFormData,
   image: File
 ): Promise<ServiceOffering> => {
-  const formData = buildServiceFormData(data, image);
+  const formData = await buildServiceFormData(data, image);
   const response = await api.post<ServiceOffering>(API_URL, formData);
   return response.data;
 };
@@ -48,7 +48,7 @@ export const updateService = async (
   data: UpdateServiceRequest,
   image?: File | null
 ): Promise<ServiceOffering> => {
-  const formData = buildServiceFormData(data, image);
+  const formData = await buildServiceFormData(data, image);
   const response = await api.patch<ServiceOffering>(`${API_URL}/${id}`, formData);
   return response.data;
 };

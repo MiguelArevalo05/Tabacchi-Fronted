@@ -31,12 +31,20 @@ import {
   updateProductAvailability,
 } from "@/features/products/services/productService";
 import type { Product, ProductFormData } from "@/features/products/types/ecommerce";
-import { formatPrice } from "@/features/products/types/ecommerce";
+import {
+  formatPrice,
+  getProductBadgeOption,
+  PRODUCT_BADGE_OPTIONS,
+} from "@/features/products/types/ecommerce";
 
 const emptyForm: ProductFormData = {
   name: "",
   description: "",
   price: 0,
+  originalPrice: null,
+  discountPercentage: null,
+  badgeLabel: "",
+  badgeColor: null,
   stock: 0,
   isActive: true,
 };
@@ -90,10 +98,19 @@ export default function ProductsAdminPage() {
   };
 
   const openEdit = (product: Product) => {
+    const badge = getProductBadgeOption(product.badgeLabel, product.badgeColor);
+
     setForm({
       name: product.name,
       description: product.description ?? "",
       price: Number(product.price),
+      originalPrice:
+        product.originalPrice === null || product.originalPrice === undefined
+          ? null
+          : Number(product.originalPrice),
+      discountPercentage: product.discountPercentage ?? null,
+      badgeLabel: badge?.label ?? "",
+      badgeColor: badge?.color ?? null,
       stock: product.stock,
       isActive: product.isActive,
     });
@@ -180,6 +197,16 @@ export default function ProductsAdminPage() {
   };
 
   const previewSrc = imagePreview || currentImageUrl;
+  const selectedBadge = getProductBadgeOption(form.badgeLabel, form.badgeColor);
+
+  const handleBadgeChange = (label: string) => {
+    const option = PRODUCT_BADGE_OPTIONS.find((item) => item.label === label);
+    setForm((prev) => ({
+      ...prev,
+      badgeLabel: option?.label ?? "",
+      badgeColor: option?.color ?? null,
+    }));
+  };
 
   return (
     <div className="max-w-6xl">
@@ -214,6 +241,7 @@ export default function ProductsAdminPage() {
               <AdminTh>Imagen</AdminTh>
               <AdminTh>Nombre</AdminTh>
               <AdminTh>Precio</AdminTh>
+              <AdminTh>Card</AdminTh>
               <AdminTh>Stock</AdminTh>
               <AdminTh>Estado</AdminTh>
               <AdminTh align="right">Acciones</AdminTh>
@@ -221,12 +249,13 @@ export default function ProductsAdminPage() {
           </AdminTableHead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
-              <AdminEmptyState message="Cargando productos..." colSpan={6} />
+              <AdminEmptyState message="Cargando productos..." colSpan={7} />
             ) : products.length === 0 ? (
-              <AdminEmptyState message="No hay productos registrados" colSpan={6} />
+              <AdminEmptyState message="No hay productos registrados" colSpan={7} />
             ) : (
               products.map((p) => {
                 const img = getUploadImageUrl(p.imageUrl);
+                const badge = getProductBadgeOption(p.badgeLabel, p.badgeColor);
                 return (
                   <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-4 py-3.5">
@@ -240,6 +269,23 @@ export default function ProductsAdminPage() {
                     </td>
                     <td className="px-4 py-3.5 font-medium text-slate-900">{p.name}</td>
                     <td className="px-4 py-3.5 text-slate-700">{formatPrice(p.price)}</td>
+                    <td className="px-4 py-3.5 text-slate-700">
+                      <div className="space-y-1 text-xs">
+                        {badge ? (
+                          <span className={`inline-flex rounded-full px-2 py-1 font-semibold ${badge.className}`}>
+                            {badge.label}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">Sin etiqueta</span>
+                        )}
+                        {p.originalPrice ? (
+                          <p className="text-slate-500">Antes: {formatPrice(p.originalPrice)}</p>
+                        ) : null}
+                        {p.discountPercentage ? (
+                          <p className="font-semibold text-blue-700">{p.discountPercentage}% OFF</p>
+                        ) : null}
+                      </div>
+                    </td>
                     <td className="px-4 py-3.5 text-slate-700">{p.stock}</td>
                     <td className="px-4 py-3.5">
                       <AdminAvailabilityToggle
@@ -269,6 +315,7 @@ export default function ProductsAdminPage() {
         <AdminModal
           title={editingId ? "Editar producto" : "Nuevo producto"}
           onClose={() => setShowModal(false)}
+          size="xl"
           footer={
             <>
               <AdminBtnSecondary onClick={() => setShowModal(false)}>Cancelar</AdminBtnSecondary>
@@ -278,55 +325,169 @@ export default function ProductsAdminPage() {
             </>
           }
         >
-          <form id="product-form" onSubmit={handleSubmit} className="space-y-4">
-
-            {[
-              { key: "name", label: "Nombre", type: "text" },
-              { key: "description", label: "Descripción", type: "text" },
-              { key: "price", label: "Precio", type: "number" },
-              { key: "stock", label: "Stock", type: "number" },
-            ].map((f) => (
-              <div key={f.key}>
-                <label className="block text-sm font-medium mb-1">{f.label}</label>
-                <input
-                  type={f.type}
-                  value={String(form[f.key as keyof ProductFormData] ?? "")}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      [f.key]: f.type === "number" ? Number(e.target.value) : e.target.value,
-                    }))
-                  }
-                  className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
-                  required={f.key === "name" || f.key === "price"}
-                  step={f.key === "price" ? "0.01" : undefined}
-                />
-              </div>
-            ))}
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Imagen {editingId ? "(opcional, deja vacío para mantener la actual)" : "(obligatoria)"}
-              </label>
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                onChange={handleImageChange}
-                className="w-full text-sm text-slate-600"
-              />
-              <p className="text-xs text-slate-400 mt-1">JPG, PNG, WEBP o GIF. Máx. 5 MB.</p>
-              {previewSrc && (
-                <div className="relative w-24 h-24 mt-3 rounded-lg overflow-hidden border border-slate-200">
-                  <Image src={previewSrc} alt="Vista previa" fill className="object-cover" sizes="96px" unoptimized={!!imagePreview} />
+          <form id="product-form" onSubmit={handleSubmit} className="space-y-5">
+            <section className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
+              <h3 className="text-sm font-semibold text-slate-900">Información principal</h3>
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Nombre</label>
+                  <input
+                    type="text"
+                    value={form.name}
+                    onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                    placeholder="Ej. Extintor PQS 6 kg"
+                    required
+                  />
                 </div>
-              )}
-            </div>
 
-            <ProductAvailabilityField
-              value={form.isActive ?? true}
-              onChange={(isActive) => setForm((p) => ({ ...p, isActive }))}
-            />
+                <div>
+                  <label className="block text-sm font-medium mb-1">Stock</label>
+                  <input
+                    type="number"
+                    value={String(form.stock ?? "")}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        stock: e.target.value === "" ? null : Number(e.target.value),
+                      }))
+                    }
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                    min={0}
+                  />
+                </div>
 
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1">Descripción</label>
+                  <textarea
+                    value={form.description ?? ""}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, description: e.target.value }))
+                    }
+                    className="min-h-24 w-full resize-y px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                    placeholder="Texto corto que aparecerá en la card del producto"
+                  />
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-slate-100 bg-white p-4">
+              <h3 className="text-sm font-semibold text-slate-900">Precio y etiqueta de card</h3>
+              <div className="mt-4 grid gap-4 md:grid-cols-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Precio actual</label>
+                  <input
+                    type="number"
+                    value={String(form.price ?? "")}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        price: e.target.value === "" ? 0 : Number(e.target.value),
+                      }))
+                    }
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                    min={0}
+                    step="0.01"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Precio anterior</label>
+                  <input
+                    type="number"
+                    value={String(form.originalPrice ?? "")}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        originalPrice: e.target.value === "" ? null : Number(e.target.value),
+                      }))
+                    }
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                    min={0}
+                    step="0.01"
+                    placeholder="Opcional"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Descuento (%)</label>
+                  <input
+                    type="number"
+                    value={String(form.discountPercentage ?? "")}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        discountPercentage: e.target.value === "" ? null : Number(e.target.value),
+                      }))
+                    }
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                    min={0}
+                    max={100}
+                    placeholder="Opcional"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1">Etiqueta del producto</label>
+                  <select
+                    value={form.badgeLabel ?? ""}
+                    onChange={(e) => handleBadgeChange(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                  >
+                    <option value="">Sin etiqueta</option>
+                    {PRODUCT_BADGE_OPTIONS.map((option) => (
+                      <option key={option.label} value={option.label}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-slate-400">
+                    La etiqueta se mostrará arriba de la imagen en la landing.
+                  </p>
+                </div>
+
+                <div>
+                  <span className="block text-sm font-medium mb-1">Vista previa</span>
+                  <div className="flex h-11 items-center rounded-xl border border-dashed border-slate-200 px-3">
+                    {selectedBadge ? (
+                      <span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${selectedBadge.className}`}>
+                        {selectedBadge.label}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-400">Sin etiqueta visible</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="grid gap-5 lg:grid-cols-[1fr_1.15fr]">
+              <div className="rounded-2xl border border-slate-100 bg-white p-4">
+                <label className="block text-sm font-semibold text-slate-900">
+                  Imagen {editingId ? "(opcional, deja vacío para mantener la actual)" : "(obligatoria)"}
+                </label>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  onChange={handleImageChange}
+                  className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-blue-700"
+                />
+                <p className="text-xs text-slate-400 mt-2">
+                  JPG, PNG, WEBP o GIF. Máx. 5 MB. Se subirá en formato WEBP.
+                </p>
+                {previewSrc && (
+                  <div className="relative mt-4 h-36 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                    <Image src={previewSrc} alt="Vista previa" fill className="object-contain p-3" sizes="280px" unoptimized={!!imagePreview} />
+                  </div>
+                )}
+              </div>
+
+              <ProductAvailabilityField
+                value={form.isActive ?? true}
+                onChange={(isActive) => setForm((p) => ({ ...p, isActive }))}
+              />
+            </section>
           </form>
         </AdminModal>
       )}

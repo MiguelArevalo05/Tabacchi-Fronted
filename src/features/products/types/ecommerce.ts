@@ -35,6 +35,10 @@ export interface Product {
   name: string;
   description: string | null;
   price: number | string;
+  originalPrice?: number | string | null;
+  discountPercentage?: number | null;
+  badgeLabel?: string | null;
+  badgeColor?: ProductBadgeColor | null;
   imageUrl: string | null;
   stock: number;
   isActive: boolean;
@@ -46,7 +50,11 @@ export interface ProductFormData {
   name: string;
   description?: string;
   price: number;
-  stock?: number;
+  originalPrice?: number | null;
+  discountPercentage?: number | null;
+  badgeLabel?: string | null;
+  badgeColor?: ProductBadgeColor | null;
+  stock?: number | null;
   isActive?: boolean;
 }
 
@@ -166,6 +174,62 @@ export function formatPrice(value: number | string): string {
     style: "currency",
     currency: "PEN",
   }).format(num || 0);
+}
+
+export type ProductBadgeColor = "green" | "indigo" | "amber" | "blue" | "red";
+
+export interface ProductBadgeOption {
+  label: string;
+  color: ProductBadgeColor;
+  className: string;
+}
+
+export const PRODUCT_BADGE_OPTIONS: ProductBadgeOption[] = [
+  {
+    label: "Nuevo",
+    color: "green",
+    className: "bg-emerald-100 text-emerald-700",
+  },
+  {
+    label: "Oferta",
+    color: "indigo",
+    className: "bg-indigo-100 text-indigo-600",
+  },
+  {
+    label: "Destacado",
+    color: "amber",
+    className: "bg-amber-100 text-amber-700",
+  },
+  {
+    label: "Popular",
+    color: "blue",
+    className: "bg-blue-100 text-blue-700",
+  },
+  {
+    label: "Liquidación",
+    color: "red",
+    className: "bg-red-100 text-red-700",
+  },
+];
+
+export function getProductBadgeOption(
+  label?: string | null,
+  color?: ProductBadgeColor | null
+): ProductBadgeOption | null {
+  if (!label) return null;
+
+  return (
+    PRODUCT_BADGE_OPTIONS.find(
+      (option) => option.label === label && (!color || option.color === color)
+    ) ??
+    PRODUCT_BADGE_OPTIONS.find((option) => option.label === label) ?? {
+      label,
+      color: color ?? "green",
+      className:
+        PRODUCT_BADGE_OPTIONS.find((option) => option.color === color)?.className ??
+        PRODUCT_BADGE_OPTIONS[0].className,
+    }
+  );
 }
 
 export type CatalogAvailabilityStatus = "available" | "out_of_stock";

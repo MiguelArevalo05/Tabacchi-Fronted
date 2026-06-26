@@ -214,7 +214,7 @@ export const Sidebar = () => {
           <Link href="/admin" className="flex items-center gap-3 group">
             <div className="relative w-11 h-11 rounded-xl overflow-hidden bg-white ring-1 ring-slate-700 shrink-0">
               <Image
-                src="/images/taba2.png"
+                src="/images/logo-tabacchi.png"
                 alt="Grupo Tabacchi"
                 fill
                 sizes="44px"

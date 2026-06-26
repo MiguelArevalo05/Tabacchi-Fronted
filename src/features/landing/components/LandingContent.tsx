@@ -1,33 +1,28 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
 import {
+  BadgeCheck,
   Bug,
+  ChevronRight,
+  CreditCard,
   Droplets,
-  ShieldCheck,
-  Sparkles,
-  Clock,
-  Award,
-  Phone,
+  Headphones,
   Mail,
   MapPin,
-  ChevronRight,
-  Truck,
-  BadgeCheck,
-  Star,
-  Headphones,
-  CheckCircle2,
+  Phone,
+  ShieldCheck,
   ShoppingCart,
+  Truck,
+  Users,
   Wrench,
-  Package,
   type LucideIcon,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { FaFacebookF, FaInstagram, FaLinkedinIn, FaWhatsapp } from "react-icons/fa";
 
-import { CatalogAvailabilityBadge } from "@/features/products/components/CatalogAvailabilityBadge";
-import { ServiceAvailabilityBadge } from "@/features/products/components/ServiceAvailabilityBadge";
 import StoreHeader from "@/components/layout/StoreHeader";
 import { Button } from "@/components/ui/button";
 import { Toast } from "@/components/ui/toast";
@@ -35,25 +30,15 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useCart } from "@/features/cart/hooks/useCart";
 import { getProducts } from "@/features/products/services/productService";
 import { getServices } from "@/features/products/services/serviceOfferingService";
-import type { Product, ServiceOffering } from "@/features/products/types/ecommerce";
-import { getUploadImageUrl } from "@/lib/utils";
 import {
   CATALOG_AVAILABILITY_CONFIG,
   formatPrice,
+  getProductBadgeOption,
   isProductPurchasable,
-  isServicePurchasable,
-  SERVICE_AVAILABILITY_CONFIG,
 } from "@/features/products/types/ecommerce";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
-import Autoplay from "embla-carousel-autoplay";
+import type { Product, ServiceOffering } from "@/features/products/types/ecommerce";
+import { getUploadImageUrl } from "@/lib/utils";
 
-const SERVICE_ICONS: LucideIcon[] = [Bug, Droplets, Sparkles, ShieldCheck];
 const FALLBACK_IMAGES = [
   "/images/carrusel-1.webp",
   "/images/carrusel-2.webp",
@@ -61,162 +46,115 @@ const FALLBACK_IMAGES = [
   "/images/carrusel-4.webp",
 ];
 
-const FOOTER_LINKS = [
-  { href: "#inicio", label: "Inicio" },
-  { href: "#servicios", label: "Servicios" },
-  { href: "#productos", label: "Productos" },
-  { href: "#nosotros", label: "Nosotros" },
-  { href: "#contacto", label: "Contacto" },
+const TRUST_ITEMS = [
+  {
+    icon: ShieldCheck,
+    title: "Seguridad garantizada",
+    description: "Protocolos certificados",
+  },
+  {
+    icon: Users,
+    title: "Personal especializado",
+    description: "Técnicos certificados",
+  },
+  {
+    icon: BadgeCheck,
+    title: "Cumplimiento normativo",
+    description: "Normas y reglamentos",
+  },
+];
+
+const SERVICE_ICONS: LucideIcon[] = [ShieldCheck, Bug, Droplets, Wrench];
+
+const SERVICE_CARD_ICON_COLORS = [
+  "text-red-500",
+  "text-amber-400",
+  "text-blue-600",
+  "text-red-500",
 ];
 
 const BENEFITS = [
   {
-    icon: ShieldCheck,
-    title: "Seguridad total",
-    description: "Protocolos certificados para personas y mascotas",
-  },
-  {
-    icon: BadgeCheck,
-    title: "Certificación PE",
-    description: "Cumplimiento de normas técnicas peruanas",
-  },
-  {
-    icon: Star,
-    title: "Calidad premium",
-    description: "Productos autorizados y equipos capacitados",
-  },
-  {
     icon: Truck,
-    title: "Respuesta rápida",
-    description: "Atención y programación en 24-48 horas",
+    title: "Envíos a todo el Perú",
+    description: "Despacho rápido y seguro",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Garantía en todos nuestros productos",
+    description: "Respaldo técnico certificado",
+  },
+  {
+    icon: Headphones,
+    title: "Asesoría técnica especializada",
+    description: "Acompañamiento antes y después",
+  },
+  {
+    icon: CreditCard,
+    title: "Métodos de pago 100% seguros",
+    description: "Compra protegida",
   },
 ];
 
-const PROCESS_STEPS = [
-  {
-    step: "01",
-    title: "Evaluación",
-    description: "Inspeccionamos tu espacio y definimos el tratamiento adecuado.",
-  },
-  {
-    step: "02",
-    title: "Tratamiento",
-    description: "Aplicamos protocolos seguros con productos autorizados.",
-  },
-  {
-    step: "03",
-    title: "Seguimiento",
-    description: "Garantizamos resultados duraderos con control post-servicio.",
-  },
+const FOOTER_LINKS = [
+  { href: "#inicio", label: "Inicio" },
+  { href: "#productos", label: "Productos" },
+  { href: "#servicios", label: "Servicios" },
+  { href: "#nosotros", label: "Nosotros" },
+  { href: "#contacto", label: "Contacto" },
 ];
 
-const CAROUSEL_IMAGES = [
-  {
-    src: "/images/carrusel-1.webp",
-    alt: "Comprometidos con el trabajo en equipo",
-  },
-  {
-    src: "/images/carrusel-2.webp",
-    alt: "Construyendo el futuro con excelencia",
-  },
-  {
-    src: "/images/carrusel-3.webp",
-    alt: "Excelencia en cada servicio",
-  },
-  {
-    src: "/images/carrusel-4.webp",
-    alt: "Comprometidos con el medio ambiente",
-  },
-];
-
-const HERO_SLIDES = CAROUSEL_IMAGES;
-
-function BrandLogo({ className = "h-12 w-12" }: { className?: string }) {
+function LogoMark({ className = "h-16 w-56" }: { className?: string }) {
   return (
-    <div
-      className={`relative shrink-0 rounded-2xl overflow-hidden bg-white shadow-md ring-1 ring-slate-200 ${className}`}
-    >
+    <div className={`relative ${className}`}>
       <Image
-        src="/images/taba2.png"
+        src="/images/logo-footer.png"
         alt="Grupo Tabacchi"
         fill
-        sizes="64px"
-        className="object-contain p-1.5"
+        sizes="224px"
+        className="object-contain object-left"
         priority
       />
     </div>
   );
 }
 
-function FooterBrand() {
-  return (
-    <div className="flex items-center gap-4">
-      <BrandLogo className="h-16 w-16" />
-      <div>
-        <h3 className="text-xl font-bold text-white">Grupo Tabacchi</h3>
-        <p className="text-sm text-slate-400">Seguridad y control profesional</p>
-      </div>
-    </div>
-  );
+function getFallbackImage(index: number) {
+  return FALLBACK_IMAGES[index % FALLBACK_IMAGES.length];
 }
 
-function SectionHeading({
-  badge,
-  title,
-  subtitle,
-  light = false,
-}: {
-  badge?: string;
-  title: string;
-  subtitle: string;
-  light?: boolean;
-}) {
-  return (
-    <div className="text-center max-w-2xl mx-auto mb-14">
-      {badge && (
-        <span
-          className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium mb-4 ${
-            light
-              ? "bg-white/10 text-blue-100 border border-white/20"
-              : "bg-blue-50 text-blue-700 border border-blue-100"
-          }`}
-        >
-          {badge}
-        </span>
-      )}
-      <h2
-        className={`text-3xl sm:text-4xl font-bold tracking-tight ${
-          light ? "text-white" : "text-slate-900"
-        }`}
-      >
-        {title}
-      </h2>
-      <p
-        className={`mt-4 text-lg leading-relaxed ${
-          light ? "text-blue-100" : "text-slate-600"
-        }`}
-      >
-        {subtitle}
-      </p>
-    </div>
-  );
+function getProductImage(product: Product, index: number) {
+  return getUploadImageUrl(product.imageUrl) ?? getFallbackImage(index);
+}
+
+function getServiceImage(service: ServiceOffering, index: number) {
+  return getUploadImageUrl(service.imageUrl) ?? getFallbackImage(index + 1);
+}
+
+function getProductDiscount(product: Product): number | null {
+  if (product.discountPercentage) return product.discountPercentage;
+  if (!product.originalPrice) return null;
+
+  const price = Number(product.price);
+  const originalPrice = Number(product.originalPrice);
+  if (!price || !originalPrice || originalPrice <= price) return null;
+
+  return Math.round(((originalPrice - price) / originalPrice) * 100);
 }
 
 export default function LandingContent() {
   const router = useRouter();
   const { user } = useAuth();
-  const { addToCart, addServiceToCart } = useCart();
+  const { addToCart } = useCart();
   const [services, setServices] = useState<ServiceOffering[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
+  const [showAllServices, setShowAllServices] = useState(false);
   const [addingId, setAddingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   useEffect(() => {
-    Promise.all([
-      getServices({ limit: 20 }),
-      getProducts({ limit: 20 }),
-    ])
+    Promise.all([getServices({ limit: 20 }), getProducts({ limit: 20 })])
       .then(([servicesRes, productsRes]) => {
         setServices(servicesRes.data);
         setProducts(productsRes.data);
@@ -233,286 +171,178 @@ export default function LandingContent() {
       router.push("/login?redirect=/landing");
       return;
     }
+
     setAddingId(`product-${productId}`);
     const ok = await addToCart(productId, 1);
     setAddingId(null);
-    if (ok) {
-      setToast({ type: "success", message: "Producto agregado al carrito." });
-    } else {
-      setToast({ type: "error", message: "No se pudo agregar al carrito." });
-    }
+    setToast({
+      type: ok ? "success" : "error",
+      message: ok ? "Producto agregado al carrito." : "No se pudo agregar al carrito.",
+    });
   };
 
-  const handleAddServiceToCart = async (serviceId: string) => {
-    if (!user) {
-      router.push("/login?redirect=/landing");
-      return;
-    }
-    setAddingId(`service-${serviceId}`);
-    const ok = await addServiceToCart(serviceId, 1);
-    setAddingId(null);
-    if (ok) {
-      setToast({ type: "success", message: "Servicio agregado al carrito." });
-    } else {
-      setToast({ type: "error", message: "No se pudo agregar al carrito." });
-    }
-  };
+  const visibleServices = showAllServices ? services : services.slice(0, 4);
 
   return (
     <div className="min-h-screen bg-white text-slate-900 scroll-smooth">
       <StoreHeader />
       {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
 
-      {/* Hero */}
       <section
         id="inicio"
-        className="relative min-h-[calc(100vh-5rem)] flex items-center pt-20"
+        className="relative box-border flex min-h-screen scroll-mt-28 overflow-hidden bg-white pt-24 lg:scroll-mt-32 lg:pt-28"
       >
-        <Carousel
-          opts={{ align: "start", loop: true }}
-          plugins={[Autoplay({ delay: 5000 })]}
-          className="absolute inset-0 w-full h-full"
-        >
-          <CarouselContent className="h-full ml-0">
-            {HERO_SLIDES.map((slide, index) => (
-              <CarouselItem key={index} className="pl-0 h-full">
-                <div className="relative w-full h-[calc(100vh-5rem)] min-h-[520px]">
-                  <Image
-                    src={slide.src}
-                    alt={slide.alt}
-                    fill
-                    className="object-cover"
-                    sizes="100vw"
-                    priority={index === 0}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-r from-slate-900/85 via-slate-900/60 to-slate-900/30" />
-                </div>
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-        </Carousel>
-
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          <div className="max-w-3xl">
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-sm font-medium mb-6">
-              <Award className="w-4 h-4 text-yellow-400" />
-              Grupo Tabacchi S.A.C. — Especialistas en control y seguridad
-            </span>
-
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-[1.1] tracking-tight">
-              Protege tu hogar y empresa{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-yellow-300">
-                con confianza
-              </span>
+        <div className="relative mx-auto grid w-full max-w-7xl items-center gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[0.92fr_1.08fr] lg:px-8 lg:py-0">
+          <div className="relative z-10 py-8 lg:py-16">
+            <p className="mb-5 text-xs font-black uppercase tracking-[0.24em] text-red-600">
+              Seguridad, control y saneamiento industrial
+            </p>
+            <h1 className="max-w-xl text-4xl font-black leading-[1.08] tracking-tight text-blue-950 sm:text-5xl lg:text-[3.4rem]">
+              Protegemos lo que más valoras:{" "}
+              <span className="text-red-600">tu vida</span> y tu empresa
             </h1>
-
-            <p className="mt-6 text-lg sm:text-xl text-slate-200 leading-relaxed max-w-2xl">
-              Fumigación, control de plagas, desinfección y limpieza de tanques.
-              Soluciones seguras cumpliendo los estándares y normas técnicas
-              peruanas.
+            <p className="mt-6 max-w-lg text-sm leading-7 text-slate-600 sm:text-base">
+              Soluciones integrales en extintores, fumigación y limpieza de tanques
+              con altos estándares de calidad y seguridad.
             </p>
 
-            <div className="mt-10 flex flex-col sm:flex-row gap-4">
-              <Button
-                size="lg"
-                asChild
-                className="bg-yellow-400 text-slate-900 hover:bg-yellow-300 font-semibold h-13 px-8 text-base shadow-xl shadow-yellow-400/20"
-              >
-                <a href="#contacto">
-                  Cotizar ahora
-                  <ChevronRight className="w-5 h-5" />
-                </a>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                asChild
-                className="h-13 px-8 text-base border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white backdrop-blur-sm"
-              >
-                <a href="#servicios">Explorar servicios</a>
-              </Button>
-            </div>
-
-            <div className="mt-12 flex flex-wrap gap-6 text-white/90">
-              {[
-                { value: "100+", label: "Servicios realizados" },
-                { value: "100%", label: "Seguridad garantizada" },
-                { value: "24/7", label: "Atención rápida" },
-              ].map((stat) => (
-                <div key={stat.label} className="flex items-center gap-2">
-                  <span className="text-2xl sm:text-3xl font-bold text-yellow-400">
-                    {stat.value}
+            <div className="mt-9 grid gap-5 sm:grid-cols-3">
+              {TRUST_ITEMS.map((item) => (
+                <div key={item.title} className="flex items-start gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center text-blue-950">
+                    <item.icon className="h-7 w-7 stroke-[1.8]" />
                   </span>
-                  <span className="text-sm text-slate-300 max-w-[100px] leading-tight">
-                    {stat.label}
+                  <span>
+                    <span className="block text-xs font-black leading-5 text-blue-950">{item.title}</span>
+                    <span className="mt-1 block text-[11px] leading-5 text-slate-500">{item.description}</span>
                   </span>
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* Benefits */}
-      <section className="py-12 lg:py-16 bg-white border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-            {BENEFITS.map((benefit) => (
-              <article
-                key={benefit.title}
-                className="group bg-white rounded-2xl p-6 shadow-xl shadow-slate-200/60 border border-slate-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
+            <div className="mt-9 flex flex-col gap-4 sm:flex-row">
+              <Button asChild className="h-14 rounded-md bg-blue-950 px-8 text-sm font-black text-white shadow-[0_12px_24px_rgba(15,23,42,0.16)] hover:bg-blue-900">
+                <a href="#productos">
+                  Ver productos y servicios
+                  <ChevronRight className="h-4 w-4" />
+                </a>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="h-14 rounded-md border-slate-200 bg-white px-8 text-sm font-black text-blue-950 shadow-[0_10px_24px_rgba(15,23,42,0.08)] hover:bg-slate-50"
               >
-                <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center mb-4 group-hover:bg-blue-700 transition-colors">
-                  <benefit.icon className="w-6 h-6 text-blue-700 group-hover:text-white transition-colors" />
+                <a href="#contacto">
+                  Cotizar servicio
+                  <ChevronRight className="h-4 w-4" />
+                </a>
+              </Button>
+            </div>
+          </div>
+
+          <div className="relative min-h-[360px] lg:-mr-8 lg:min-h-[560px]">
+            <div className="absolute inset-0 overflow-hidden rounded-bl-[4rem] bg-blue-100 shadow-2xl shadow-blue-950/10 lg:[clip-path:polygon(16%_0,100%_0,100%_100%,0_100%)]">
+              <Image
+                src="/images/hero.webp"
+                alt="Especialistas Grupo Tabacchi en campo"
+                fill
+                priority
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-white/10 via-transparent to-blue-950/15" />
+            </div>
+
+            <div className="absolute bottom-7 right-5 max-w-[250px] rounded-xl border border-slate-100 bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.18)] sm:right-8">
+              <div className="flex items-center gap-4">
+                <span className="flex h-12 w-12 items-center justify-center rounded-xl text-blue-950">
+                  <Users className="h-8 w-8 stroke-[1.7]" />
+                </span>
+                <div>
+                  <p className="text-sm font-black text-blue-950">Más de 10 años</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">Protegiendo empresas y familias</p>
                 </div>
-                <h3 className="font-semibold text-slate-900 mb-1">
-                  {benefit.title}
-                </h3>
-                <p className="text-sm text-slate-500 leading-relaxed">
-                  {benefit.description}
-                </p>
-              </article>
-            ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Services — category cards with images */}
-      <section id="servicios" className="py-20 lg:py-28 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <SectionHeading
-            badge="Nuestros servicios"
-            title="Encuentra lo que necesitas"
-            subtitle="Contrata servicios profesionales con precio definido. Disponibles o no según el panel de administración."
-          />
-
-          {loadingCatalog ? (
-            <p className="text-center text-slate-500">Cargando servicios...</p>
-          ) : services.length === 0 ? (
-            <p className="text-center text-slate-500">No hay servicios disponibles por el momento.</p>
-          ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {services.map((service, index) => {
-                const Icon = SERVICE_ICONS[index % SERVICE_ICONS.length];
-                const image = getUploadImageUrl(service.imageUrl) || FALLBACK_IMAGES[index % FALLBACK_IMAGES.length];
-                const addingKey = `service-${service.id}`;
-                return (
-                  <article
-                    key={service.id}
-                    className="bg-gradient-to-br from-violet-50/80 to-white rounded-2xl border border-violet-100 shadow-sm hover:shadow-lg hover:border-violet-200 transition-all overflow-hidden flex flex-col ring-1 ring-violet-50"
-                  >
-                    <div className="relative aspect-[5/3] overflow-hidden bg-violet-100/50">
-                      <Image
-                        src={image}
-                        alt={service.name}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 50vw, 25vw"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-violet-950/30 to-transparent" />
-                      <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-violet-600 text-white shadow-sm">
-                        <Wrench className="w-3.5 h-3.5" />
-                        Servicio
-                      </span>
-                      <div className="absolute bottom-3 right-3 w-9 h-9 rounded-lg bg-white/90 backdrop-blur-sm flex items-center justify-center">
-                        <Icon className="w-4 h-4 text-violet-700" />
-                      </div>
-                    </div>
-                    <div className="p-5 flex flex-col flex-1">
-                      <h3 className="font-bold text-slate-900 mb-1">{service.name}</h3>
-                      <p className="text-sm text-slate-500 line-clamp-2 mb-3 flex-1">
-                        {service.description}
-                      </p>
-                      <div className="flex items-center justify-between mt-auto gap-2">
-                        <span className="text-lg font-bold text-violet-700">
-                          {formatPrice(service.price)}
-                        </span>
-                        <ServiceAvailabilityBadge item={service} />
-                      </div>
-                      <Button
-                        className="w-full mt-4 bg-violet-600 hover:bg-violet-700"
-                        disabled={!isServicePurchasable(service) || addingId === addingKey}
-                        onClick={() => handleAddServiceToCart(service.id)}
-                      >
-                        <ShoppingCart className="w-4 h-4" />
-                        {addingId === addingKey
-                          ? "Agregando..."
-                          : isServicePurchasable(service)
-                            ? "Agregar al carrito"
-                            : SERVICE_AVAILABILITY_CONFIG.unavailable.label}
-                      </Button>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Products */}
-      <section id="productos" className="py-20 lg:py-28 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <SectionHeading
-            badge="Tienda"
-            title="Productos destacados"
-            subtitle="Agrega productos al carrito y genera tu orden. Debes iniciar sesión para comprar."
-          />
+      <section id="productos" className="relative scroll-mt-28 overflow-hidden bg-white py-14 lg:scroll-mt-32 lg:py-16">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_12%,rgba(37,99,235,0.16),transparent_32%),radial-gradient(circle_at_88%_88%,rgba(220,38,38,0.12),transparent_36%),linear-gradient(180deg,#ffffff_0%,#eef4ff_100%)]" />
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="relative mb-6 text-center">
+            <p className="text-xs font-black uppercase tracking-[0.28em] text-red-600">
+              Productos destacados
+            </p>
+            <h2 className="mt-3 text-2xl font-black text-blue-950 sm:text-3xl lg:text-4xl">
+              Equipos certificados para tu seguridad
+            </h2>
+          </div>
 
           {loadingCatalog ? (
             <p className="text-center text-slate-500">Cargando productos...</p>
           ) : products.length === 0 ? (
             <p className="text-center text-slate-500">No hay productos disponibles por el momento.</p>
           ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {products.map((product) => {
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              {products.slice(0, 5).map((product, index) => {
                 const addingKey = `product-${product.id}`;
+                const image = getProductImage(product, index);
+                const discount = getProductDiscount(product);
+                const badge = getProductBadgeOption(product.badgeLabel, product.badgeColor);
+
                 return (
-                  <article
-                    key={product.id}
-                    className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg hover:border-blue-200 transition-all overflow-hidden flex flex-col"
-                  >
-                    <div className="relative aspect-square bg-slate-100">
-                      {getUploadImageUrl(product.imageUrl) ? (
-                        <Image
-                          src={getUploadImageUrl(product.imageUrl)!}
-                          alt={product.name}
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 768px) 50vw, 25vw"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">
-                          Sin imagen
-                        </div>
-                      )}
-                      <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-700 text-white shadow-sm">
-                        <Package className="w-3.5 h-3.5" />
-                        Producto
-                      </span>
-                    </div>
-                    <div className="p-5 flex flex-col flex-1">
-                      <h3 className="font-bold text-slate-900 mb-1">{product.name}</h3>
-                      <p className="text-sm text-slate-500 line-clamp-2 mb-3 flex-1">
-                        {product.description}
-                      </p>
-                      <div className="flex items-center justify-between mt-auto gap-2">
-                        <span className="text-lg font-bold text-blue-700">
-                          {formatPrice(product.price)}
+                  <article key={product.id} className="group flex min-h-[420px] flex-col rounded-[1.45rem] bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,0.16)] ring-1 ring-slate-200/70 transition-all hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,23,42,0.2)]">
+                    <div className="relative h-56 overflow-hidden rounded-[1.15rem] bg-gradient-to-br from-slate-50 to-slate-100">
+                      {badge ? (
+                        <span className={`absolute left-4 top-4 z-10 rounded-full px-3 py-1.5 text-xs font-semibold ${badge.className}`}>
+                          {badge.label}
                         </span>
-                        <CatalogAvailabilityBadge item={product} mode="store" />
+                      ) : null}
+                      <Image
+                        src={image}
+                        alt={product.name}
+                        fill
+                        sizes="(max-width: 640px) 90vw, (max-width: 1280px) 33vw, 20vw"
+                        className="object-contain p-5 transition-transform duration-300 group-hover:scale-105"
+                      />
+                    </div>
+                    <div className="flex flex-1 flex-col px-2 pb-2 pt-4">
+                      <h3 className="text-lg font-black leading-6 text-slate-950">
+                        {product.name}
+                      </h3>
+
+                      <div className="mt-auto flex items-center justify-between gap-3 pt-5">
+                        <div className="flex flex-wrap items-end gap-x-2 gap-y-1">
+                          <span className="text-xl font-black text-slate-950">{formatPrice(product.price)}</span>
+                          {product.originalPrice ? (
+                            <span className="pb-1 text-sm font-semibold text-slate-300 line-through">
+                              {formatPrice(product.originalPrice)}
+                            </span>
+                          ) : null}
+                        </div>
+                        {discount ? (
+                          <span className="shrink-0 rounded-lg bg-indigo-100 px-3 py-2 text-xs font-black text-indigo-600">
+                            {discount}% OFF
+                          </span>
+                        ) : null}
                       </div>
+
+                      {!isProductPurchasable(product) ? (
+                        <p className="mt-3 text-xs font-semibold text-red-600">
+                          {CATALOG_AVAILABILITY_CONFIG.out_of_stock.label}
+                        </p>
+                      ) : null}
+
                       <Button
-                        className="w-full mt-4 bg-blue-700 hover:bg-blue-800"
+                        className="mt-3 h-11 w-full rounded-lg bg-slate-950 text-sm font-bold text-white shadow-[0_10px_22px_rgba(15,23,42,0.22)] hover:bg-slate-800"
                         disabled={!isProductPurchasable(product) || addingId === addingKey}
                         onClick={() => handleAddToCart(product.id)}
+                        aria-label={`Agregar ${product.name} al carrito`}
                       >
-                        <ShoppingCart className="w-4 h-4" />
-                        {addingId === addingKey
-                          ? "Agregando..."
-                          : isProductPurchasable(product)
-                            ? "Agregar al carrito"
-                            : CATALOG_AVAILABILITY_CONFIG.out_of_stock.label}
+                        <ShoppingCart className="h-4 w-4" />
+                        {addingId === addingKey ? "Agregando..." : "Agregar al carrito"}
                       </Button>
                     </div>
                   </article>
@@ -520,352 +350,263 @@ export default function LandingContent() {
               })}
             </div>
           )}
+
+          <div className="mt-6 flex justify-center">
+            <Button
+              asChild
+              className="h-12 rounded-md bg-red-600 px-8 text-xs font-black text-white shadow-[0_12px_28px_rgba(220,38,38,0.22)] hover:bg-red-700"
+            >
+              <Link href="/productos">Ver todos los productos</Link>
+            </Button>
+          </div>
         </div>
       </section>
 
-      {/* Process */}
-      <section className="py-20 lg:py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <SectionHeading
-            badge="Cómo trabajamos"
-            title="Un proceso simple y transparente"
-            subtitle="Desde la primera visita hasta el seguimiento, cuidamos cada detalle de tu servicio."
-          />
-          <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
-            {PROCESS_STEPS.map((item, index) => (
-              <div key={item.step} className="relative text-center">
-                {index < PROCESS_STEPS.length - 1 && (
-                  <div className="hidden md:block absolute top-8 left-[60%] w-[80%] h-px bg-gradient-to-r from-blue-200 to-transparent" />
-                )}
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-700 text-white text-xl font-bold mb-5 shadow-lg shadow-blue-700/30">
-                  {item.step}
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">
-                  {item.title}
-                </h3>
-                <p className="text-slate-600 text-sm leading-relaxed max-w-xs mx-auto">
-                  {item.description}
-                </p>
-              </div>
+      <section id="servicios" className="relative scroll-mt-28 overflow-hidden bg-[#13154b] py-14 text-white lg:scroll-mt-32 lg:py-16">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.08),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(37,99,235,0.18),transparent_34%)]" />
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="relative mb-6 text-center">
+            <p className="text-xs font-black uppercase tracking-[0.35em] text-amber-300">
+              Servicios profesionales
+            </p>
+            <h2 className="mt-3 text-2xl font-black sm:text-3xl lg:text-4xl">Soluciones integrales a medida</h2>
+          </div>
+
+          {loadingCatalog ? (
+            <p className="relative text-center text-blue-100">Cargando servicios...</p>
+          ) : services.length === 0 ? (
+            <p className="relative text-center text-blue-100">
+              No hay servicios disponibles por el momento.
+            </p>
+          ) : (
+            <div className="relative grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {visibleServices.map((service, index) => {
+                const Icon = SERVICE_ICONS[index % SERVICE_ICONS.length];
+                const image = getServiceImage(service, index);
+                const description =
+                  service.description ?? "Servicio profesional certificado para tu empresa.";
+                const iconColor = SERVICE_CARD_ICON_COLORS[index % SERVICE_CARD_ICON_COLORS.length];
+
+                return (
+                  <article key={service.id} className="group flex min-h-[390px] flex-col overflow-hidden rounded-[1.5rem] bg-white p-3 text-slate-900 shadow-[0_18px_44px_rgba(3,7,18,0.24)] ring-1 ring-white/10 transition-all hover:-translate-y-1 hover:shadow-[0_24px_58px_rgba(3,7,18,0.3)]">
+                    <div className="relative h-48 overflow-hidden rounded-[1.25rem] bg-slate-100">
+                      <Image
+                        src={image}
+                        alt={service.name}
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-blue-950/35 via-transparent to-transparent" />
+                      <span className={`absolute bottom-4 left-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-[0_12px_26px_rgba(15,23,42,0.18)] ${iconColor}`}>
+                        <Icon className="h-7 w-7 stroke-[1.9]" />
+                      </span>
+                    </div>
+
+                    <div className="flex flex-1 flex-col px-3 pb-3 pt-5">
+                      <p className="text-[11px] font-black uppercase tracking-[0.22em] text-red-600">Servicio</p>
+                      <h3 className="mt-2 line-clamp-2 min-h-[3.5rem] text-xl font-black leading-7 text-blue-950">{service.name}</h3>
+                      <p className="mt-3 line-clamp-4 min-h-[6rem] text-sm font-medium leading-6 text-slate-600">{description}</p>
+
+                      <a href="#contacto" className="mt-auto inline-flex items-center gap-2 pt-4 text-xs font-black text-blue-950 transition-colors hover:text-red-600">
+                        Más información
+                        <ChevronRight className="h-4 w-4" />
+                      </a>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+
+          {services.length > 0 && (
+            <div className="relative mt-5 text-center">
+              {services.length > 4 ? (
+                <Button
+                  type="button"
+                  onClick={() => setShowAllServices((prev) => !prev)}
+                  className="h-12 rounded-md bg-amber-300 px-12 text-xs font-black text-blue-950 shadow-[0_12px_28px_rgba(251,191,36,0.25)] hover:bg-amber-400"
+                >
+                  {showAllServices ? "Ver menos servicios" : "Ver más servicios"}
+                </Button>
+              ) : (
+                <Button
+                  asChild
+                  className="h-12 rounded-md bg-amber-300 px-12 text-xs font-black text-blue-950 shadow-[0_12px_28px_rgba(251,191,36,0.25)] hover:bg-amber-400"
+                >
+                  <a href="#contacto">Ver más servicios</a>
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section id="nosotros" className="scroll-mt-28 bg-white py-16 lg:scroll-mt-32 lg:py-20">
+        <div className="mx-auto grid max-w-7xl gap-5 px-4 sm:px-6 md:grid-cols-2 lg:grid-cols-4 lg:px-8">
+          {BENEFITS.map((item) => (
+            <div key={item.title} className="flex min-h-20 items-center gap-4 rounded-lg border border-slate-100 bg-white px-5 py-4 shadow-[0_10px_28px_rgba(15,23,42,0.07)]">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-slate-100 bg-white text-blue-950 shadow-[0_8px_20px_rgba(15,23,42,0.08)]">
+                <item.icon className="h-7 w-7 stroke-[1.8]" />
+              </span>
+              <span>
+                <span className="block text-sm font-black leading-5 text-blue-950">{item.title}</span>
+                <span className="mt-1 block text-xs text-slate-500">{item.description}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section id="certificaciones" className="scroll-mt-28 bg-slate-50 py-20 lg:scroll-mt-32 lg:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto mb-10 max-w-2xl text-center">
+            <p className="text-xs font-black uppercase tracking-[0.28em] text-red-600">
+              Certificaciones
+            </p>
+            <h2 className="mt-3 text-2xl font-black text-blue-950 sm:text-3xl lg:text-4xl">
+              Respaldo técnico y cumplimiento normativo
+            </h2>
+            <p className="mt-4 text-sm leading-7 text-slate-600">
+              Trabajamos con procesos alineados a estándares de seguridad para productos, mantenimiento y servicios especializados.
+            </p>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-3">
+            {[
+              {
+                icon: ShieldCheck,
+                title: "Protocolos seguros",
+                description: "Atención con procedimientos orientados a proteger personas, activos e instalaciones.",
+              },
+              {
+                icon: BadgeCheck,
+                title: "Equipos certificados",
+                description: "Productos y soluciones preparados para operaciones comerciales e industriales.",
+              },
+              {
+                icon: Users,
+                title: "Personal especializado",
+                description: "Equipo con experiencia en prevención, mantenimiento y control sanitario.",
+              },
+            ].map((item) => (
+              <article key={item.title} className="rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+                <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-950">
+                  <item.icon className="h-7 w-7 stroke-[1.8]" />
+                </span>
+                <h3 className="mt-5 text-lg font-black text-blue-950">{item.title}</h3>
+                <p className="mt-3 text-sm leading-7 text-slate-600">{item.description}</p>
+              </article>
             ))}
           </div>
         </div>
       </section>
 
-      {/* About + Carousel */}
-      <section id="nosotros" className="py-20 lg:py-28 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            <div>
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-sm font-medium mb-4 border border-blue-100">
-                Sobre nosotros
-              </span>
-              <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
-                Experiencia que genera confianza
-              </h2>
-              <p className="mt-6 text-slate-600 text-lg leading-relaxed">
-                En Grupo Tabacchi trabajamos con equipos capacitados, productos
-                autorizados y protocolos alineados a la normativa peruana. Nos
-                enfocamos en resultados duraderos y en la tranquilidad de
-                nuestros clientes.
-              </p>
-              <ul className="mt-8 space-y-4">
-                {[
-                  {
-                    icon: Clock,
-                    text: "Respuesta rápida y programación flexible",
-                  },
-                  {
-                    icon: ShieldCheck,
-                    text: "Procedimientos seguros para personas y mascotas",
-                  },
-                  {
-                    icon: Award,
-                    text: "Cumplimiento de estándares técnicos nacionales",
-                  },
-                ].map((item) => (
-                  <li key={item.text} className="flex items-start gap-3">
-                    <span className="mt-0.5 w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
-                      <item.icon className="w-4 h-4 text-blue-700" />
-                    </span>
-                    <span className="text-slate-700">{item.text}</span>
-                  </li>
-                ))}
-              </ul>
+      <section id="contacto" className="scroll-mt-28 bg-white py-16 lg:scroll-mt-32 lg:py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="relative min-h-32 overflow-hidden rounded-xl bg-[#c91820] px-6 py-7 text-white shadow-[0_18px_42px_rgba(127,29,29,0.18)] sm:px-10 lg:px-16">
+            <div className="absolute bottom-0 left-0 hidden h-full w-72 sm:block">
+              <Image
+                src="/images/carrusel-2.webp"
+                alt="Extintor Grupo Tabacchi"
+                fill
+                sizes="288px"
+                className="object-cover object-[22%_66%]"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#c91820]/15 to-[#c91820]" />
             </div>
-
-            <Carousel
-              opts={{ align: "start", loop: true }}
-              plugins={[Autoplay({ delay: 4500 })]}
-              className="w-full"
-            >
-              <CarouselContent>
-                {CAROUSEL_IMAGES.map((image, index) => (
-                  <CarouselItem key={index}>
-                    <div className="relative aspect-[16/10] rounded-2xl overflow-hidden shadow-2xl ring-1 ring-slate-200">
-                      <Image
-                        src={image.src}
-                        alt={image.alt}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 1024px) 100vw, 50vw"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-transparent to-transparent" />
-                      <p className="absolute bottom-4 left-4 right-4 text-white font-medium text-lg">
-                        {image.alt}
-                      </p>
-                    </div>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious className="left-3 bg-white/90 hover:bg-white" />
-              <CarouselNext className="right-3 bg-white/90 hover:bg-white" />
-            </Carousel>
-          </div>
-        </div>
-      </section>
-
-      {/* Expert help CTA — Gobox "¿Necesitas ayuda?" style */}
-      <section className="py-20 lg:py-28">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-700 via-blue-800 to-slate-900 shadow-2xl shadow-blue-900/30">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-0 w-72 h-72 bg-yellow-400/10 rounded-full blur-3xl" />
-
-            <div className="relative grid lg:grid-cols-2 gap-10 items-center p-8 sm:p-12 lg:p-16">
+            <div className="relative flex flex-col gap-5 sm:pl-52 md:flex-row md:items-center md:justify-between lg:pl-64">
               <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-blue-100 text-sm font-medium mb-6 border border-white/20">
-                  <Headphones className="w-4 h-4" />
-                  Asesoría gratuita
-                </div>
-                <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
-                  ¿Necesitas ayuda con tu espacio?
-                </h2>
-                <p className="mt-4 text-blue-100 text-lg leading-relaxed">
-                  Nuestros especialistas te ayudan a elegir el tratamiento
-                  correcto y planificar el servicio ideal para hogares, comercios
-                  e industria en todo el Perú.
-                </p>
-                <ul className="mt-8 space-y-3">
-                  {[
-                    "Evaluación sin compromiso",
-                    "Cotización personalizada",
-                    "Programación flexible",
-                  ].map((item) => (
-                    <li
-                      key={item}
-                      className="flex items-center gap-2 text-white/90 text-sm"
-                    >
-                      <CheckCircle2 className="w-5 h-5 text-yellow-400 shrink-0" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  size="lg"
-                  asChild
-                  className="mt-8 bg-yellow-400 text-slate-900 hover:bg-yellow-300 font-semibold h-12 px-8 shadow-lg"
-                >
-                  <a href="#contacto">
-                    Contactar asesor
-                    <ChevronRight className="w-5 h-5" />
-                  </a>
-                </Button>
+                <h2 className="text-2xl font-black leading-tight sm:text-3xl">¿Necesitas asesoría o cotización?</h2>
+                <p className="mt-2 text-sm font-medium text-red-50">Nuestro equipo está listo para ayudarte.</p>
               </div>
-
-              <div className="relative aspect-[4/3] rounded-2xl overflow-hidden ring-1 ring-white/20 shadow-2xl hidden sm:block">
-                <Image
-                  src="/images/carrusel-3.webp"
-                  alt="Equipo Grupo Tabacchi"
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 1024px) 100vw, 50vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Contact */}
-      <section id="contacto" className="py-20 lg:py-28 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <SectionHeading
-            badge="Contacto"
-            title="Hablemos de tu proyecto"
-            subtitle="Cuéntanos qué necesitas y te responderemos a la brevedad con una propuesta adaptada."
-          />
-
-          <div className="grid lg:grid-cols-5 gap-8 lg:gap-12">
-            <div className="lg:col-span-2 space-y-5">
-              {[
-                {
-                  icon: Phone,
-                  label: "Teléfono",
-                  value: "+51 999 999 999",
-                  href: "tel:+51999999999",
-                },
-                {
-                  icon: Mail,
-                  label: "Correo",
-                  value: "contacto@grupotabacchi.com",
-                  href: "mailto:contacto@grupotabacchi.com",
-                },
-                {
-                  icon: MapPin,
-                  label: "Ubicación",
-                  value: "Lima, Perú",
-                  href: null,
-                },
-              ].map((item) => (
-                <a
-                  key={item.label}
-                  href={item.href ?? undefined}
-                  className={`flex items-center gap-4 p-5 bg-white rounded-2xl border border-slate-100 shadow-sm ${
-                    item.href
-                      ? "hover:shadow-md hover:border-blue-100 transition-all"
-                      : ""
-                  }`}
-                >
-                  <span className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-                    <item.icon className="w-5 h-5 text-blue-700" />
-                  </span>
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">
-                      {item.label}
-                    </p>
-                    <p className="text-slate-800 font-medium">{item.value}</p>
-                  </div>
+              <Button asChild className="h-14 rounded-md bg-white px-9 text-sm font-black text-blue-950 shadow-[0_10px_24px_rgba(127,29,29,0.18)] hover:bg-slate-100">
+                <a href="mailto:ventas@grupotabacchi.com">
+                  Cotizar ahora
+                  <ChevronRight className="h-4 w-4" />
                 </a>
-              ))}
-            </div>
-
-            <div className="lg:col-span-3 bg-white rounded-2xl p-8 sm:p-10 shadow-lg border border-slate-100">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-blue-700 flex items-center justify-center">
-                  <ShieldCheck className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold text-slate-900">
-                    Acceso al sistema
-                  </h3>
-                  <p className="text-sm text-slate-500">
-                    Plataforma de gestión para clientes y colaboradores
-                  </p>
-                </div>
-              </div>
-              <p className="text-slate-600 mb-8 leading-relaxed">
-                Si ya eres cliente o colaborador de Grupo Tabacchi, ingresa a la
-                plataforma para gestionar tus servicios, pedidos y reportes.
-              </p>
-              <Button
-                asChild
-                className="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 h-12 px-8 text-base"
-              >
-                <Link href="/login">
-                  Ir al login
-                  <ChevronRight className="w-4 h-4" />
-                </Link>
               </Button>
-              <p className="mt-6 text-sm text-slate-500">
-                Para cotizaciones comerciales, escríbenos por correo o teléfono.
-              </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-slate-950 text-slate-300">
-        <div className="h-1 bg-gradient-to-r from-red-600 via-yellow-400 to-blue-600" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-16">
-          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="sm:col-span-2 lg:col-span-1">
-              <FooterBrand />
-              <p className="mt-4 text-sm text-slate-400 leading-relaxed max-w-xs">
-                Especialistas en extintores, fumigación, control de plagas y
-                limpieza de tanques. Calidad y normas técnicas peruanas.
-              </p>
+      <footer className="bg-[#13154b] text-blue-100">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <div className="grid gap-8 border-b border-white/10 pb-7 md:grid-cols-2 lg:grid-cols-[1.35fr_1fr_0.9fr_1.25fr] lg:divide-x lg:divide-white/10">
+            <div className="lg:pr-8">
+              <LogoMark className="h-20 w-72" />
+              <div className="mt-5 flex gap-4">
+                {[
+                  { label: "Facebook", icon: FaFacebookF },
+                  { label: "Instagram", icon: FaInstagram },
+                  { label: "WhatsApp", icon: FaWhatsapp },
+                  { label: "LinkedIn", icon: FaLinkedinIn },
+                ].map((item) => (
+                  <a
+                    key={item.label}
+                    href="#contacto"
+                    aria-label={item.label}
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white transition hover:bg-white hover:text-blue-950"
+                  >
+                    <item.icon className="h-4 w-4" />
+                  </a>
+                ))}
+              </div>
             </div>
 
-            <div>
-              <h4 className="text-sm font-semibold uppercase tracking-wider text-white mb-4">
-                Navegación
-              </h4>
-              <ul className="space-y-3">
+            <div className="lg:px-8">
+              <h3 className="text-sm font-black text-white">Enlaces</h3>
+              <ul className="mt-4 grid grid-cols-2 gap-x-8 gap-y-3 text-sm font-medium text-blue-100/80">
                 {FOOTER_LINKS.map((link) => (
                   <li key={link.href}>
-                    <a
-                      href={link.href}
-                      className="text-sm text-slate-400 hover:text-yellow-400 transition-colors"
-                    >
-                      {link.label}
-                    </a>
+                    <a href={link.href} className="transition hover:text-white">{link.label}</a>
                   </li>
                 ))}
-                <li>
-                  <Link
-                    href="/login"
-                    className="text-sm text-slate-400 hover:text-yellow-400 transition-colors"
-                  >
-                    Acceso clientes
-                  </Link>
-                </li>
               </ul>
             </div>
 
-            <div>
-              <h4 className="text-sm font-semibold uppercase tracking-wider text-white mb-4">
-                Servicios
-              </h4>
-              <ul className="space-y-3 text-sm text-slate-400">
-                {services.map((s) => (
-                  <li key={s.id}>{s.name}</li>
-                ))}
+            <div className="lg:px-8">
+              <h3 className="text-sm font-black text-white">Categorías</h3>
+              <ul className="mt-4 space-y-3 text-sm font-medium text-blue-100/80">
+                <li>Extintores</li>
+                <li>Fumigación</li>
+                <li>Limpieza de Tanques</li>
+                <li>Accesorios y Repuestos</li>
               </ul>
             </div>
 
-            <div>
-              <h4 className="text-sm font-semibold uppercase tracking-wider text-white mb-4">
-                Contacto
-              </h4>
-              <ul className="space-y-3 text-sm">
-                <li className="flex items-center gap-2 text-slate-400">
-                  <Phone className="w-4 h-4 text-yellow-400 shrink-0" />
-                  +51 999 999 999
+            <div className="lg:pl-8">
+              <h3 className="text-sm font-black text-white">Contáctanos</h3>
+              <ul className="mt-4 space-y-4 text-sm font-medium text-blue-100/80">
+                <li className="flex items-center gap-3">
+                  <Phone className="h-5 w-5 text-white" />
+                  +51 938 422 157
                 </li>
-                <li className="flex items-center gap-2 text-slate-400">
-                  <Mail className="w-4 h-4 text-yellow-400 shrink-0" />
-                  contacto@grupotabacchi.com
+                <li className="flex items-center gap-3">
+                  <Mail className="h-5 w-5 text-white" />
+                  ventas@grupotabacchi.com
                 </li>
-                <li className="flex items-center gap-2 text-slate-400">
-                  <MapPin className="w-4 h-4 text-yellow-400 shrink-0" />
+                <li className="flex items-center gap-3">
+                  <MapPin className="h-5 w-5 text-white" />
                   Lima, Perú
                 </li>
               </ul>
             </div>
           </div>
 
-          <div className="mt-12 pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-slate-500 text-center sm:text-left">
-              © {new Date().getFullYear()} Grupo Tabacchi S.A.C. Todos los
-              derechos reservados.
-            </p>
-            <p className="text-xs text-slate-600 text-center sm:text-right">
-              Extintores · Fumigación · Limpieza de tanques
-            </p>
+          <div className="pt-5 text-center text-sm text-blue-100/70">
+            © 2024 Grupo Tabacchi. Todos los derechos reservados.
           </div>
         </div>
       </footer>
 
-      {/* Floating contact button */}
       <a
         href="#contacto"
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white px-5 py-3 rounded-full shadow-xl shadow-blue-700/40 font-medium text-sm transition-all hover:scale-105"
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-blue-950 px-5 py-3 text-sm font-bold text-white shadow-xl shadow-blue-950/30 transition hover:scale-105 hover:bg-blue-900"
         aria-label="Solicitar cotización"
       >
-        <Phone className="w-4 h-4" />
+        <Phone className="h-4 w-4" />
         <span className="hidden sm:inline">Cotizar</span>
       </a>
     </div>
