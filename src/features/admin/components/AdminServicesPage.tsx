@@ -278,6 +278,7 @@ export default function CatalogServicesPage() {
           key={editingId ?? "new"}
           title={editingId ? "Editar servicio" : "Nuevo servicio"}
           onClose={() => setShowModal(false)}
+          size="xl"
           footer={
             <>
               <AdminBtnSecondary onClick={() => setShowModal(false)}>Cancelar</AdminBtnSecondary>
@@ -287,55 +288,106 @@ export default function CatalogServicesPage() {
             </>
           }
         >
-          <form id="service-form" onSubmit={handleSubmit} className="space-y-4">
-
-            {[
-              { key: "name", label: "Nombre", type: "text" },
-              { key: "description", label: "Descripción", type: "text" },
-              { key: "price", label: "Precio (S/)", type: "number" },
-              { key: "displayOrder", label: "Orden de visualización", type: "number" },
-            ].map((f) => (
-              <div key={f.key}>
-                <label className="block text-sm font-medium mb-1">{f.label}</label>
-                <input
-                  type={f.type}
-                  value={String(form[f.key as keyof ServiceFormData] ?? "")}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      [f.key]: f.type === "number" ? Number(e.target.value) : e.target.value,
-                    }))
-                  }
-                  className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
-                  required={f.key === "name"}
-                  step={f.key === "price" ? "0.01" : undefined}
-                />
-              </div>
-            ))}
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Imagen {editingId ? "(opcional)" : "(obligatoria)"}
-              </label>
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                onChange={handleImageChange}
-                className="w-full text-sm text-slate-600"
-              />
-              <p className="text-xs text-slate-400 mt-1">JPG, PNG, WEBP o GIF. Máx. 5 MB.</p>
-              {previewSrc && (
-                <div className="relative w-24 h-24 mt-3 rounded-lg overflow-hidden border border-slate-200">
-                  <Image src={previewSrc} alt="Vista previa" fill className="object-cover" sizes="96px" unoptimized={!!imagePreview} />
+          <form id="service-form" onSubmit={handleSubmit} className="space-y-5">
+            <section className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
+              <h3 className="text-sm font-semibold text-slate-900">Información del servicio</h3>
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Nombre</label>
+                  <input
+                    type="text"
+                    value={form.name}
+                    onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                    placeholder="Ej. Mantenimiento de extintores"
+                    required
+                  />
                 </div>
-              )}
-            </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Orden de visualización</label>
+                  <input
+                    type="number"
+                    value={String(form.displayOrder ?? "")}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        displayOrder: e.target.value === "" ? 0 : Number(e.target.value),
+                      }))
+                    }
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                    min={0}
+                    placeholder="0"
+                  />
+                  <p className="mt-1 text-xs text-slate-400">
+                    Los números menores aparecen primero.
+                  </p>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1">Descripción para la landing</label>
+                  <textarea
+                    value={form.description ?? ""}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, description: e.target.value }))
+                    }
+                    className="min-h-36 w-full resize-y px-3 py-2.5 border border-slate-200 rounded-xl text-sm leading-6 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                    placeholder="Escribe un mini párrafo: qué incluye el servicio, para quién está pensado y qué beneficio ofrece."
+                  />
+                  <p className="mt-1 text-xs text-slate-400">
+                    Este texto se mostrará como mini párrafo en la card pública del servicio.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <section className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
+              <div className="rounded-2xl border border-slate-100 bg-white p-4">
+                <h3 className="text-sm font-semibold text-slate-900">Precio comercial</h3>
+                <div className="mt-4">
+                  <label className="block text-sm font-medium mb-1">Precio (S/)</label>
+                  <input
+                    type="number"
+                    value={String(form.price ?? "")}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        price: e.target.value === "" ? 0 : Number(e.target.value),
+                      }))
+                    }
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                    min={0}
+                    step="0.01"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-100 bg-white p-4">
+                <label className="block text-sm font-semibold text-slate-900">
+                  Imagen {editingId ? "(opcional, deja vacío para mantener la actual)" : "(obligatoria)"}
+                </label>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  onChange={handleImageChange}
+                  className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-blue-700"
+                />
+                <p className="text-xs text-slate-400 mt-2">
+                  JPG, PNG, WEBP o GIF. Máx. 5 MB. Se subirá en formato WEBP.
+                </p>
+                {previewSrc && (
+                  <div className="relative mt-4 h-40 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                    <Image src={previewSrc} alt="Vista previa" fill className="object-cover" sizes="360px" unoptimized={!!imagePreview} />
+                  </div>
+                )}
+              </div>
+            </section>
 
             <ServiceAvailabilityField
               value={form.isActive ?? true}
               onChange={(isActive) => setForm((p) => ({ ...p, isActive }))}
             />
-
           </form>
         </AdminModal>
       )}
