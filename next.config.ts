@@ -23,6 +23,11 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'tabacchi-backend.onrender.com',
         pathname: '/uploads/**'
+      },
+      {
+        protocol: 'https',
+        hostname: 'tabacchi-backend.onrender.com',
+        pathname: '/uploads/**'
       }
     ]
   }
