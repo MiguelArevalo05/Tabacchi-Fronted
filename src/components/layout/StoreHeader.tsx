@@ -22,11 +22,17 @@ const NAV_SECTION_IDS = NAV_LINKS.map((link) => link.href.split("#")[1]).filter(
   Boolean
 );
 
-function BrandLogo({ className = "h-16 w-56 sm:h-20 sm:w-64 lg:h-24 lg:w-72" }: { className?: string }) {
+function BrandLogo({
+  className = "h-16 w-56 sm:h-20 sm:w-64 lg:h-24 lg:w-72",
+  light = false,
+}: {
+  className?: string;
+  light?: boolean;
+}) {
   return (
     <div className={`relative shrink-0 ${className}`}>
       <Image
-        src="/images/logo-navbar.png"
+        src={light ? "/images/logo-footer.png" : "/images/logo-navbar.png"}
         alt="Grupo Tabacchi"
         fill
         sizes="(min-width: 1024px) 288px, 256px"
@@ -37,18 +43,19 @@ function BrandLogo({ className = "h-16 w-56 sm:h-20 sm:w-64 lg:h-24 lg:w-72" }: 
   );
 }
 
-export function HeaderBrand() {
+export function HeaderBrand({ light = false }: { light?: boolean }) {
   return (
-    <BrandLogo />
+    <BrandLogo light={light} />
   );
 }
 
-export default function StoreHeader() {
+export default function StoreHeader({ transparentOnTop = false }: { transparentOnTop?: boolean }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState("inicio");
   const { user, isAdmin } = useAuth();
   const { cart } = useCart();
+  const transparent = transparentOnTop && !scrolled && !mobileMenuOpen;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -102,7 +109,9 @@ export default function StoreHeader() {
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled
+        transparent
+          ? "bg-transparent"
+          : scrolled
           ? "bg-white shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
           : "bg-white"
       }`}
@@ -114,7 +123,7 @@ export default function StoreHeader() {
             className="shrink-0 transition-opacity hover:opacity-90"
             aria-label="Grupo Tabacchi - Inicio"
           >
-            <HeaderBrand />
+            <HeaderBrand light={transparent} />
           </Link>
 
           <nav className="hidden flex-1 items-center justify-center gap-7 xl:flex">
@@ -130,9 +139,13 @@ export default function StoreHeader() {
                     event.preventDefault();
                     scrollToSection(link.href);
                   }}
-                  className={`group relative inline-flex items-center gap-1 py-2 text-sm font-bold text-[#17245c] transition-colors hover:text-[#d71920] ${
+                  className={`group relative inline-flex items-center gap-1 py-2 text-sm font-bold transition-colors hover:text-[#d71920] ${
+                    transparent ? "text-white" : "text-[#17245c]"
+                  } ${
                     isActive
-                      ? "after:absolute after:-bottom-1 after:left-0 after:h-1 after:w-full after:rounded-full after:bg-[#17245c]"
+                      ? `after:absolute after:-bottom-1 after:left-0 after:h-1 after:w-full after:rounded-full ${
+                          transparent ? "after:bg-[#d71920]" : "after:bg-[#17245c]"
+                        }`
                       : ""
                   }`}
                 >
@@ -150,7 +163,9 @@ export default function StoreHeader() {
               variant="ghost"
               size="icon"
               asChild
-              className="relative h-11 w-11 text-[#17245c] hover:bg-transparent hover:text-[#d71920]"
+              className={`relative h-11 w-11 hover:bg-transparent hover:text-[#d71920] ${
+                transparent ? "text-white" : "text-[#17245c]"
+              }`}
             >
               <Link href="/carrito" aria-label="Carrito">
                 <ShoppingCart className="h-6 w-6 stroke-[2.4]" />
@@ -164,11 +179,27 @@ export default function StoreHeader() {
 
             {user ? (
               <>
-                <Button variant="outline" asChild className="border-[#17245c]/20 font-bold text-[#17245c]">
+                <Button
+                  variant="outline"
+                  asChild
+                  className={`font-bold ${
+                    transparent
+                      ? "border-white/25 bg-white/5 text-white hover:bg-white/[0.12] hover:text-white"
+                      : "border-[#17245c]/20 text-[#17245c]"
+                  }`}
+                >
                   <Link href="/my-orders">Mis órdenes</Link>
                 </Button>
                 {isAdmin && (
-                  <Button variant="outline" asChild className="border-[#17245c]/20 font-bold text-[#17245c]">
+                  <Button
+                    variant="outline"
+                    asChild
+                    className={`font-bold ${
+                      transparent
+                        ? "border-white/25 bg-white/5 text-white hover:bg-white/[0.12] hover:text-white"
+                        : "border-[#17245c]/20 text-[#17245c]"
+                    }`}
+                  >
                     <Link href="/admin">Panel</Link>
                   </Button>
                 )}
@@ -182,7 +213,11 @@ export default function StoreHeader() {
 
           <button
             type="button"
-            className="rounded-md border border-slate-200 bg-white p-2 text-[#17245c] shadow-sm transition-colors hover:bg-slate-50 xl:hidden"
+            className={`rounded-md p-2 shadow-sm transition-colors xl:hidden ${
+              transparent
+                ? "border border-white/20 bg-white/10 text-white hover:bg-white/20"
+                : "border border-slate-200 bg-white text-[#17245c] hover:bg-slate-50"
+            }`}
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label={mobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
           >
