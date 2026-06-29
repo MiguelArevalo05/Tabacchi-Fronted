@@ -185,43 +185,51 @@ export default function LandingContent() {
 
   return (
     <div className="min-h-screen bg-white text-slate-900 scroll-smooth">
-      <StoreHeader />
+      <StoreHeader transparentOnTop />
       {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
 
       <section
         id="inicio"
-        className="relative box-border flex min-h-screen scroll-mt-28 overflow-hidden bg-white pt-24 lg:scroll-mt-32 lg:pt-28"
+        className="relative box-border flex min-h-[100svh] scroll-mt-28 overflow-hidden bg-[#061121] bg-cover bg-[position:54%_center] bg-no-repeat pt-28 text-white sm:bg-[position:58%_center] lg:min-h-screen lg:scroll-mt-32 lg:bg-[position:48%_center] lg:pt-32"
+        style={{ backgroundImage: "url('/images/hero2.webp')" }}
       >
-        <div className="relative mx-auto grid w-full max-w-7xl items-center gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[0.92fr_1.08fr] lg:px-8 lg:py-0">
-          <div className="relative z-10 py-8 lg:py-16">
-            <p className="mb-5 text-xs font-black uppercase tracking-[0.24em] text-red-600">
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(3,10,24,0.86)_0%,rgba(5,14,32,0.58)_34%,rgba(5,14,32,0.16)_62%,rgba(5,14,32,0.5)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_42%_43%,rgba(215,25,32,0.14),transparent_24%),radial-gradient(circle_at_80%_38%,rgba(56,189,248,0.1),transparent_32%)]" />
+        <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-[#061121]/85 to-transparent" />
+
+        <div className="relative mx-auto flex w-full max-w-7xl items-center px-4 pb-14 pt-8 sm:px-6 lg:px-8 lg:pb-20 lg:pt-0">
+          <div className="relative z-10 max-w-[640px] py-8 lg:py-12">
+            <p className="mb-5 text-[11px] font-black uppercase tracking-[0.42em] text-red-500">
               Seguridad, control y saneamiento industrial
             </p>
-            <h1 className="max-w-xl text-4xl font-black leading-[1.08] tracking-tight text-blue-950 sm:text-5xl lg:text-[3.4rem]">
+            <h1 className="max-w-[610px] text-4xl font-black leading-[1.03] tracking-tight text-white drop-shadow-[0_4px_18px_rgba(0,0,0,0.28)] sm:text-5xl lg:text-[3.85rem]">
               Protegemos lo que más valoras:{" "}
-              <span className="text-red-600">tu vida</span> y tu empresa
+              <span className="text-red-500">tu vida</span> y tu empresa
             </h1>
-            <p className="mt-6 max-w-lg text-sm leading-7 text-slate-600 sm:text-base">
+            <p className="mt-6 max-w-[560px] text-sm leading-7 text-white/[0.84] sm:text-base">
               Soluciones integrales en extintores, fumigación y limpieza de tanques
               con altos estándares de calidad y seguridad.
             </p>
 
-            <div className="mt-9 grid gap-5 sm:grid-cols-3">
+            <div className="mt-10 grid max-w-3xl gap-6 sm:grid-cols-3">
               {TRUST_ITEMS.map((item) => (
-                <div key={item.title} className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center text-blue-950">
-                    <item.icon className="h-7 w-7 stroke-[1.8]" />
+                <div
+                  key={item.title}
+                  className="flex items-start gap-4"
+                >
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/10 text-white shadow-[0_12px_24px_rgba(0,0,0,0.18)] backdrop-blur">
+                    <item.icon className="h-7 w-7 stroke-[2]" />
                   </span>
                   <span>
-                    <span className="block text-xs font-black leading-5 text-blue-950">{item.title}</span>
-                    <span className="mt-1 block text-[11px] leading-5 text-slate-500">{item.description}</span>
+                    <span className="block text-sm font-black leading-6 text-white">{item.title}</span>
+                    <span className="mt-1.5 block text-xs leading-5 text-white/70">{item.description}</span>
                   </span>
                 </div>
               ))}
             </div>
 
             <div className="mt-9 flex flex-col gap-4 sm:flex-row">
-              <Button asChild className="h-14 rounded-md bg-blue-950 px-8 text-sm font-black text-white shadow-[0_12px_24px_rgba(15,23,42,0.16)] hover:bg-blue-900">
+              <Button asChild className="h-14 rounded-md bg-[#d71920] px-8 text-sm font-black text-white shadow-[0_16px_34px_rgba(215,25,32,0.38)] hover:bg-[#b9151b]">
                 <a href="#productos">
                   Ver productos y servicios
                   <ChevronRight className="h-4 w-4" />
@@ -230,7 +238,7 @@ export default function LandingContent() {
               <Button
                 asChild
                 variant="outline"
-                className="h-14 rounded-md border-slate-200 bg-white px-8 text-sm font-black text-blue-950 shadow-[0_10px_24px_rgba(15,23,42,0.08)] hover:bg-slate-50"
+                className="h-14 rounded-md border-white/[0.22] bg-white/5 px-8 text-sm font-black text-white shadow-[0_14px_30px_rgba(0,0,0,0.18)] backdrop-blur hover:bg-white/[0.12] hover:text-white"
               >
                 <a href="#contacto">
                   Cotizar servicio
@@ -240,31 +248,6 @@ export default function LandingContent() {
             </div>
           </div>
 
-          <div className="relative min-h-[360px] lg:-mr-8 lg:min-h-[560px]">
-            <div className="absolute inset-0 overflow-hidden rounded-bl-[4rem] bg-blue-100 shadow-2xl shadow-blue-950/10 lg:[clip-path:polygon(16%_0,100%_0,100%_100%,0_100%)]">
-              <Image
-                src="/images/hero.webp"
-                alt="Especialistas Grupo Tabacchi en campo"
-                fill
-                priority
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                className="object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-white/10 via-transparent to-blue-950/15" />
-            </div>
-
-            <div className="absolute bottom-7 right-5 max-w-[250px] rounded-xl border border-slate-100 bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.18)] sm:right-8">
-              <div className="flex items-center gap-4">
-                <span className="flex h-12 w-12 items-center justify-center rounded-xl text-blue-950">
-                  <Users className="h-8 w-8 stroke-[1.7]" />
-                </span>
-                <div>
-                  <p className="text-sm font-black text-blue-950">Más de 10 años</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-500">Protegiendo empresas y familias</p>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
