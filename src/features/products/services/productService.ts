@@ -36,9 +36,10 @@ export const getProductById = async (id: string): Promise<Product> => {
 
 export const createProduct = async (
   data: ProductFormData,
-  image: File
+  image: File,
+  galleryImages?: File[]
 ): Promise<Product> => {
-  const formData = await buildProductFormData(data, image);
+  const formData = await buildProductFormData(data, image, galleryImages);
   const response = await api.post<Product>(API_URL, formData);
   return response.data;
 };
@@ -46,9 +47,10 @@ export const createProduct = async (
 export const updateProduct = async (
   id: string,
   data: UpdateProductRequest,
-  image?: File | null
+  image?: File | null,
+  galleryImages?: File[]
 ): Promise<Product> => {
-  const formData = await buildProductFormData(data, image);
+  const formData = await buildProductFormData(data, image, galleryImages);
   const response = await api.patch<Product>(`${API_URL}/${id}`, formData);
   return response.data;
 };
@@ -59,6 +61,16 @@ export const updateProductAvailability = async (
 ): Promise<Product> => {
   const response = await api.patch<Product>(`${API_URL}/${id}/availability`, {
     isActive,
+  });
+  return response.data;
+};
+
+export const updateProductIgv = async (
+  id: string,
+  priceIncludesIgv: boolean
+): Promise<Product> => {
+  const response = await api.patch<Product>(`${API_URL}/${id}/igv`, {
+    priceIncludesIgv,
   });
   return response.data;
 };

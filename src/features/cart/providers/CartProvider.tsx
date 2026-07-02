@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -24,12 +25,25 @@ interface CartContextType {
   clearCart: () => Promise<boolean>;
 }
 
+const emptyCartBreakdown = {
+  productsSubtotal: 0,
+  servicesSubtotal: 0,
+  productLineCount: 0,
+  serviceLineCount: 0,
+  subtotal: 0,
+  igv: 0,
+  total: 0,
+  hasIgv: false,
+  hasExcludedIgvProducts: false,
+};
+
 const emptyCart: Cart = {
   id: "",
   userId: "",
   items: [],
   total: 0,
   itemCount: 0,
+  breakdown: emptyCartBreakdown,
   createdAt: "",
   updatedAt: "",
 };
@@ -46,6 +60,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setCart(null);
       return;
     }
+
     try {
       setLoading(true);
       const data = await cartService.getCart();
@@ -58,10 +73,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   useEffect(() => {
-    refreshCart();
+    void refreshCart();
   }, [refreshCart]);
 
-  const addToCart = async (productId: string, quantity = 1) => {
+  const addToCart = useCallback(async (productId: string, quantity = 1) => {
     try {
       const data = await cartService.addCartItem({
         itemType: CartItemType.PRODUCT,
@@ -73,9 +88,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } catch {
       return false;
     }
-  };
+  }, []);
 
-  const addServiceToCart = async (serviceId: string, quantity = 1) => {
+  const addServiceToCart = useCallback(async (serviceId: string, quantity = 1) => {
     try {
       const data = await cartService.addCartItem({
         itemType: CartItemType.SERVICE,
@@ -87,9 +102,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } catch {
       return false;
     }
-  };
+  }, []);
 
-  const updateQuantity = async (itemId: string, quantity: number) => {
+  const updateQuantity = useCallback(async (itemId: string, quantity: number) => {
     try {
       const data = await cartService.updateCartItem(itemId, { quantity });
       setCart(data);
@@ -97,9 +112,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } catch {
       return false;
     }
-  };
+  }, []);
 
-  const removeItem = async (itemId: string) => {
+  const removeItem = useCallback(async (itemId: string) => {
     try {
       const data = await cartService.removeCartItem(itemId);
       setCart(data);
@@ -107,9 +122,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } catch {
       return false;
     }
-  };
+  }, []);
 
-  const clearCart = async () => {
+  const clearCart = useCallback(async () => {
     try {
       const data = await cartService.clearCart();
       setCart(data);
@@ -117,24 +132,32 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } catch {
       return false;
     }
-  };
+  }, []);
 
-  return (
-    <CartContext.Provider
-      value={{
-        cart,
-        loading,
-        refreshCart,
-        addToCart,
-        addServiceToCart,
-        updateQuantity,
-        removeItem,
-        clearCart,
-      }}
-    >
-      {children}
-    </CartContext.Provider>
+  const value = useMemo(
+    () => ({
+      cart,
+      loading,
+      refreshCart,
+      addToCart,
+      addServiceToCart,
+      updateQuantity,
+      removeItem,
+      clearCart,
+    }),
+    [
+      cart,
+      loading,
+      refreshCart,
+      addToCart,
+      addServiceToCart,
+      updateQuantity,
+      removeItem,
+      clearCart,
+    ]
   );
+
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
 export const useCart = () => {

@@ -20,7 +20,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FaFacebookF, FaInstagram, FaLinkedinIn, FaWhatsapp } from "react-icons/fa";
 
 import StoreHeader from "@/components/layout/StoreHeader";
@@ -28,8 +28,8 @@ import { Button } from "@/components/ui/button";
 import { Toast } from "@/components/ui/toast";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useCart } from "@/features/cart/hooks/useCart";
-import { getProducts } from "@/features/products/services/productService";
-import { getServices } from "@/features/products/services/serviceOfferingService";
+import { useCategories } from "@/features/categories/hooks/useCategories";
+import { useProducts, useServices } from "@/features/products/hooks/useCatalogQueries";
 import {
   CATALOG_AVAILABILITY_CONFIG,
   formatPrice,
@@ -37,6 +37,7 @@ import {
   isProductPurchasable,
 } from "@/features/products/types/ecommerce";
 import type { Product, ServiceOffering } from "@/features/products/types/ecommerce";
+import type { Category } from "@/features/categories/types/category";
 import { getUploadImageUrl } from "@/lib/utils";
 
 const FALLBACK_IMAGES = [
@@ -99,6 +100,7 @@ const BENEFITS = [
 const FOOTER_LINKS = [
   { href: "#inicio", label: "Inicio" },
   { href: "#productos", label: "Productos" },
+  { href: "/productos", label: "Catálogo", isRoute: true },
   { href: "#servicios", label: "Servicios" },
   { href: "#nosotros", label: "Nosotros" },
   { href: "#contacto", label: "Contacto" },
@@ -142,29 +144,73 @@ function getProductDiscount(product: Product): number | null {
   return Math.round(((originalPrice - price) / originalPrice) * 100);
 }
 
-export default function LandingContent() {
+interface LandingContentProps {
+  initialServices?: ServiceOffering[];
+  initialProducts?: Product[];
+  initialCategories?: Category[];
+}
+
+export default function LandingContent({
+  initialServices = [],
+  initialProducts = [],
+  initialCategories = [],
+}: LandingContentProps) {
   const router = useRouter();
   const { user } = useAuth();
   const { addToCart } = useCart();
-  const [services, setServices] = useState<ServiceOffering[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loadingCatalog, setLoadingCatalog] = useState(true);
+
+  const { data: servicesResponse, isLoading: loadingServices } = useServices(
+    { limit: 20 },
+    initialServices.length > 0
+      ? { data: initialServices, meta: { total: initialServices.length, page: 1, limit: 20, totalPages: 1 } }
+      : undefined
+  );
+  const { data: productsResponse, isLoading: loadingProducts } = useProducts(
+    { limit: 20 },
+    initialProducts.length > 0
+      ? { data: initialProducts, meta: { total: initialProducts.length, page: 1, limit: 20, totalPages: 1 } }
+      : undefined
+  );
+  const { data: categoriesResponse, isLoading: loadingCategories } = useCategories(
+    { limit: 20 },
+    initialCategories.length > 0
+      ? { data: initialCategories, meta: { total: initialCategories.length, page: 1, limit: 20, totalPages: 1 } }
+      : undefined
+  );
+
+  const services = servicesResponse?.data ?? initialServices;
+  const products = productsResponse?.data ?? initialProducts;
+  const categories = categoriesResponse?.data ?? initialCategories;
+  const loadingCatalog = loadingServices || loadingProducts || loadingCategories;
   const [showAllServices, setShowAllServices] = useState(false);
   const [addingId, setAddingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  useEffect(() => {
-    Promise.all([getServices({ limit: 20 }), getProducts({ limit: 20 })])
-      .then(([servicesRes, productsRes]) => {
-        setServices(servicesRes.data);
-        setProducts(productsRes.data);
-      })
-      .catch(() => {
-        setServices([]);
-        setProducts([]);
-      })
-      .finally(() => setLoadingCatalog(false));
+  const scrollToHashSection = useCallback(() => {
+    const hash = window.location.hash.replace("#", "");
+    if (!hash) return;
+
+    const scroll = () => {
+      const section = document.getElementById(hash);
+      if (!section) return;
+
+      section.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+
+    scroll();
+    window.setTimeout(scroll, 200);
+    window.setTimeout(scroll, 500);
   }, []);
+
+  useEffect(() => {
+    if (loadingCatalog) return;
+    scrollToHashSection();
+  }, [loadingCatalog, scrollToHashSection]);
+
+  useEffect(() => {
+    window.addEventListener("hashchange", scrollToHashSection);
+    return () => window.removeEventListener("hashchange", scrollToHashSection);
+  }, [scrollToHashSection]);
 
   const handleAddToCart = async (productId: string) => {
     if (!user) {
@@ -181,6 +227,8 @@ export default function LandingContent() {
     });
   };
 
+  const visibleProducts = products.slice(0, 5);
+  const hasMoreProducts = products.length > 5;
   const visibleServices = showAllServices ? services : services.slice(0, 4);
 
   return (
@@ -268,84 +316,104 @@ export default function LandingContent() {
           ) : products.length === 0 ? (
             <p className="text-center text-slate-500">No hay productos disponibles por el momento.</p>
           ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-              {products.slice(0, 5).map((product, index) => {
-                const addingKey = `product-${product.id}`;
-                const image = getProductImage(product, index);
-                const discount = getProductDiscount(product);
-                const badge = getProductBadgeOption(product.badgeLabel, product.badgeColor);
+            <>
+              <div className="grid items-stretch gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                {visibleProducts.map((product, index) => {
+                  const addingKey = `product-${product.id}`;
+                  const image = getProductImage(product, index);
+                  const discount = getProductDiscount(product);
+                  const badge = getProductBadgeOption(product.badgeLabel, product.badgeColor);
 
-                return (
-                  <article key={product.id} className="group flex min-h-[420px] flex-col rounded-[1.45rem] bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,0.16)] ring-1 ring-slate-200/70 transition-all hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,23,42,0.2)]">
-                    <div className="relative h-56 overflow-hidden rounded-[1.15rem] bg-gradient-to-br from-slate-50 to-slate-100">
-                      {badge ? (
-                        <span className={`absolute left-4 top-4 z-10 rounded-full px-3 py-1.5 text-xs font-semibold ${badge.className}`}>
-                          {badge.label}
-                        </span>
-                      ) : null}
-                      <Image
-                        src={image}
-                        alt={product.name}
-                        fill
-                        sizes="(max-width: 640px) 90vw, (max-width: 1280px) 33vw, 20vw"
-                        className="object-contain p-5 transition-transform duration-300 group-hover:scale-105"
-                      />
-                    </div>
-                    <div className="flex flex-1 flex-col px-2 pb-2 pt-4">
-                      <h3 className="text-lg font-black leading-6 text-slate-950">
-                        {product.name}
-                      </h3>
-
-                      <div className="mt-auto flex items-center justify-between gap-3 pt-5">
-                        <div className="flex flex-wrap items-end gap-x-2 gap-y-1">
-                          <span className="text-xl font-black text-slate-950">{formatPrice(product.price)}</span>
-                          {product.originalPrice ? (
-                            <span className="pb-1 text-sm font-semibold text-slate-300 line-through">
-                              {formatPrice(product.originalPrice)}
+                  return (
+                    <article
+                      key={product.id}
+                      className="group flex h-full min-h-[420px] flex-col rounded-[1.45rem] bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,0.16)] ring-1 ring-slate-200/70 transition-all hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,23,42,0.2)]"
+                    >
+                      <Link href={`/productos/${product.id}`} className="flex min-h-0 flex-1 flex-col">
+                        <div className="relative h-56 shrink-0 overflow-hidden rounded-[1.15rem] bg-gradient-to-br from-slate-50 to-slate-100">
+                          {badge ? (
+                            <span className={`absolute left-4 top-4 z-10 rounded-full px-3 py-1.5 text-xs font-semibold ${badge.className}`}>
+                              {badge.label}
                             </span>
                           ) : null}
+                          <Image
+                            src={image}
+                            alt={product.name}
+                            fill
+                            sizes="(max-width: 640px) 90vw, (max-width: 1280px) 33vw, 20vw"
+                            className="object-contain p-5 transition-transform duration-300 group-hover:scale-105"
+                          />
                         </div>
-                        {discount ? (
-                          <span className="shrink-0 rounded-lg bg-indigo-100 px-3 py-2 text-xs font-black text-indigo-600">
-                            {discount}% OFF
-                          </span>
-                        ) : null}
+                        <div className="flex min-h-0 flex-1 flex-col px-2 pb-2 pt-4">
+                          <h3 className="line-clamp-3 min-h-[4.5rem] text-lg font-black leading-6 text-slate-950 transition-colors group-hover:text-[#d71920]">
+                            {product.name}
+                          </h3>
+
+                          <div className="mt-auto flex min-h-[3.25rem] items-end justify-between gap-3 pt-5">
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-xl font-black text-slate-950">{formatPrice(product.price)}</span>
+                              {product.originalPrice ? (
+                                <span className="text-sm font-semibold text-slate-300 line-through">
+                                  {formatPrice(product.originalPrice)}
+                                </span>
+                              ) : (
+                                <span className="invisible text-sm leading-5" aria-hidden="true">
+                                  —
+                                </span>
+                              )}
+                            </div>
+                            {discount ? (
+                              <span className="shrink-0 rounded-lg bg-indigo-100 px-3 py-2 text-xs font-black text-indigo-600">
+                                {discount}% OFF
+                              </span>
+                            ) : (
+                              <span className="invisible shrink-0 px-3 py-2 text-xs" aria-hidden="true">
+                                —
+                              </span>
+                            )}
+                          </div>
+
+                          {!isProductPurchasable(product) ? (
+                            <p className="mt-3 text-xs font-semibold text-red-600">
+                              {CATALOG_AVAILABILITY_CONFIG.out_of_stock.label}
+                            </p>
+                          ) : null}
+                        </div>
+                      </Link>
+
+                      <div className="mt-3 shrink-0 px-2 pb-2">
+                        <Button
+                          className="h-11 w-full rounded-lg bg-slate-950 text-sm font-bold text-white shadow-[0_10px_22px_rgba(15,23,42,0.22)] hover:bg-slate-800"
+                          disabled={!isProductPurchasable(product) || addingId === addingKey}
+                          onClick={() => handleAddToCart(product.id)}
+                          aria-label={`Agregar ${product.name} al carrito`}
+                        >
+                          <ShoppingCart className="h-4 w-4" />
+                          {addingId === addingKey ? "Agregando..." : "Agregar al carrito"}
+                        </Button>
                       </div>
+                    </article>
+                  );
+                })}
+              </div>
 
-                      {!isProductPurchasable(product) ? (
-                        <p className="mt-3 text-xs font-semibold text-red-600">
-                          {CATALOG_AVAILABILITY_CONFIG.out_of_stock.label}
-                        </p>
-                      ) : null}
-
-                      <Button
-                        className="mt-3 h-11 w-full rounded-lg bg-slate-950 text-sm font-bold text-white shadow-[0_10px_22px_rgba(15,23,42,0.22)] hover:bg-slate-800"
-                        disabled={!isProductPurchasable(product) || addingId === addingKey}
-                        onClick={() => handleAddToCart(product.id)}
-                        aria-label={`Agregar ${product.name} al carrito`}
-                      >
-                        <ShoppingCart className="h-4 w-4" />
-                        {addingId === addingKey ? "Agregando..." : "Agregar al carrito"}
-                      </Button>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
+              <div className="mt-6 flex justify-center">
+                <Button
+                  asChild
+                  className="h-12 rounded-md bg-red-600 px-8 text-xs font-black text-white shadow-[0_12px_28px_rgba(220,38,38,0.22)] hover:bg-red-700"
+                >
+                  <Link href="/productos">
+                    {hasMoreProducts ? "Ver todos los productos" : "Ver catálogo completo"}
+                  </Link>
+                </Button>
+              </div>
+            </>
           )}
 
-          <div className="mt-6 flex justify-center">
-            <Button
-              asChild
-              className="h-12 rounded-md bg-red-600 px-8 text-xs font-black text-white shadow-[0_12px_28px_rgba(220,38,38,0.22)] hover:bg-red-700"
-            >
-              <Link href="/productos">Ver todos los productos</Link>
-            </Button>
-          </div>
         </div>
       </section>
 
-      <section id="servicios" className="relative scroll-mt-28 overflow-hidden bg-[#13154b] py-14 text-white lg:scroll-mt-32 lg:py-16">
+      <section id="servicios" className="relative scroll-mt-28 bg-[#13154b] py-14 text-white lg:scroll-mt-32 lg:py-16">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.08),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(37,99,235,0.18),transparent_34%)]" />
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="relative mb-6 text-center">
@@ -543,7 +611,15 @@ export default function LandingContent() {
               <ul className="mt-4 grid grid-cols-2 gap-x-8 gap-y-3 text-sm font-medium text-blue-100/80">
                 {FOOTER_LINKS.map((link) => (
                   <li key={link.href}>
-                    <a href={link.href} className="transition hover:text-white">{link.label}</a>
+                    {"isRoute" in link && link.isRoute ? (
+                      <Link href={link.href} className="transition hover:text-white">
+                        {link.label}
+                      </Link>
+                    ) : (
+                      <a href={link.href} className="transition hover:text-white">
+                        {link.label}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -552,10 +628,24 @@ export default function LandingContent() {
             <div className="lg:px-8">
               <h3 className="text-sm font-black text-white">Categorías</h3>
               <ul className="mt-4 space-y-3 text-sm font-medium text-blue-100/80">
-                <li>Extintores</li>
-                <li>Fumigación</li>
-                <li>Limpieza de Tanques</li>
-                <li>Accesorios y Repuestos</li>
+                {categories.length > 0 ? (
+                  categories.map((category) => (
+                    <li key={category.id}>
+                      <Link
+                        href={`/productos?categoria=${category.slug}`}
+                        className="transition hover:text-white"
+                      >
+                        {category.name}
+                      </Link>
+                    </li>
+                  ))
+                ) : (
+                  <li>
+                    <Link href="/productos" className="transition hover:text-white">
+                      Ver catálogo
+                    </Link>
+                  </li>
+                )}
               </ul>
             </div>
 
