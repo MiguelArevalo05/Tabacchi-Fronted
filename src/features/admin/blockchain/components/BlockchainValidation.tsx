@@ -48,7 +48,7 @@ export function BlockchainValidation({
           icon: ShieldCheck,
           iconColor: "text-emerald-600",
           title: "Blockchain válida",
-          subtitle: "La cadena de bloques no presenta alteraciones.",
+          subtitle: "Todas las cadenas por orden están íntegras.",
           indicator: "🟢",
         }
       : valid === false
@@ -58,7 +58,7 @@ export function BlockchainValidation({
             icon: ShieldX,
             iconColor: "text-red-600",
             title: "Blockchain comprometida",
-            subtitle: "Se detectaron inconsistencias en la cadena.",
+            subtitle: "Se detectaron inconsistencias en alguna cadena de orden.",
             indicator: "🔴",
           }
         : {

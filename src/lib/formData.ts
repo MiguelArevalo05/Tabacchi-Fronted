@@ -1,4 +1,8 @@
-import type { ProductFormData, ServiceFormData } from "@/features/products/types/ecommerce";
+import type {
+  CreateOrderRequest,
+  ProductFormData,
+  ServiceFormData,
+} from "@/features/products/types/ecommerce";
 
 const WEBP_MIME_TYPE = "image/webp";
 const WEBP_QUALITY = 0.9;
@@ -87,7 +91,8 @@ async function convertImageToWebp(image: File): Promise<File> {
 
 export async function buildProductFormData(
   data: Partial<ProductFormData>,
-  image?: File | null
+  image?: File | null,
+  galleryImages?: File[]
 ): Promise<FormData> {
   const formData = new FormData();
   appendField(formData, "name", data.name);
@@ -97,9 +102,32 @@ export async function buildProductFormData(
   appendNullableField(formData, "discountPercentage", data.discountPercentage);
   appendNullableField(formData, "badgeLabel", data.badgeLabel);
   appendNullableField(formData, "badgeColor", data.badgeColor);
+  appendNullableField(formData, "categoryId", data.categoryId);
+  appendNullableField(formData, "category", data.category);
+  appendNullableField(formData, "rating", data.rating);
+  appendNullableField(formData, "reviewCount", data.reviewCount);
+  appendNullableField(formData, "technicalSpecs", data.technicalSpecs);
+  appendNullableField(formData, "documentation", data.documentation);
+  appendNullableField(formData, "usageRecommendations", data.usageRecommendations);
+  appendNullableField(formData, "warrantyMonths", data.warrantyMonths);
   appendField(formData, "stock", data.stock);
   appendField(formData, "isActive", data.isActive);
+
+  if (data.retainedAdditionalImages !== undefined) {
+    formData.append(
+      "retainedAdditionalImages",
+      JSON.stringify(data.retainedAdditionalImages)
+    );
+  }
+
   if (image) formData.append("image", await convertImageToWebp(image));
+
+  if (galleryImages?.length) {
+    for (const galleryImage of galleryImages) {
+      formData.append("galleryImages", await convertImageToWebp(galleryImage));
+    }
+  }
+
   return formData;
 }
 
@@ -114,5 +142,21 @@ export async function buildServiceFormData(
   appendField(formData, "displayOrder", data.displayOrder);
   appendField(formData, "isActive", data.isActive);
   if (image) formData.append("image", await convertImageToWebp(image));
+  return formData;
+}
+
+export async function buildOrderFormData(
+  data: CreateOrderRequest
+): Promise<FormData> {
+  const formData = new FormData();
+  appendField(formData, "shippingAddress", data.shippingAddress);
+  appendField(formData, "contactPhone", data.contactPhone);
+  appendField(formData, "paymentMethod", data.paymentMethod);
+  appendField(formData, "notes", data.notes);
+
+  if (data.paymentProof) {
+    formData.append("paymentProof", data.paymentProof);
+  }
+
   return formData;
 }

@@ -1,31 +1,35 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { ArrowRight, ShoppingBag, Trash2 } from "lucide-react";
 
-import StoreHeader from "@/components/layout/StoreHeader";
+import StorePageShell from "@/components/layout/StorePageShell";
 import { Button } from "@/components/ui/button";
 import { Toast } from "@/components/ui/toast";
-import { useAuth } from "@/features/auth/hooks/useAuth";
+import CartItemsTable from "@/features/cart/components/CartItemsTable";
+import CartOrderSummary from "@/features/cart/components/CartOrderSummary";
 import { useCart } from "@/features/cart/hooks/useCart";
-import { getUploadImageUrl } from "@/lib/utils";
-import { formatPrice, getCartLineItem } from "@/features/products/types/ecommerce";
+import { getCartBreakdown } from "@/features/cart/utils/cartTotals";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 
 export default function CartPage() {
   const { user, loading: authLoading } = useAuth();
-  const { cart, loading, updateQuantity, removeItem } = useCart();
+  const { cart, loading, updateQuantity, removeItem, clearCart } = useCart();
   const router = useRouter();
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/login?redirect=/carrito");
     }
   }, [user, authLoading, router]);
+
+  const items = cart?.items ?? [];
+  const breakdown = cart ? getCartBreakdown(cart) : null;
 
   const handleQuantity = async (itemId: string, quantity: number) => {
     if (quantity < 1) return;
@@ -39,133 +43,107 @@ export default function CartPage() {
     setUpdating(itemId);
     const ok = await removeItem(itemId);
     setUpdating(null);
-    if (ok) setToast({ type: "success", message: "Item eliminado del carrito." });
-    else setToast({ type: "error", message: "No se pudo eliminar el item." });
+    if (ok) setToast({ type: "success", message: "Producto eliminado del carrito." });
+    else setToast({ type: "error", message: "No se pudo eliminar el producto." });
+  };
+
+  const handleClearCart = async () => {
+    setClearing(true);
+    const ok = await clearCart();
+    setClearing(false);
+    if (ok) setToast({ type: "success", message: "Carrito vaciado correctamente." });
+    else setToast({ type: "error", message: "No se pudo vaciar el carrito." });
   };
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <p className="text-slate-500">Cargando...</p>
-      </div>
+      <StorePageShell>
+        <div className="mx-auto max-w-[1180px] px-4 py-16 sm:px-6 lg:px-8">
+          <p className="text-slate-500">Cargando carrito...</p>
+        </div>
+      </StorePageShell>
     );
   }
 
-  const items = cart?.items ?? [];
-
   return (
-    <div className="min-h-screen bg-slate-50">
-      <StoreHeader />
-      {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
+    <StorePageShell>
+      {toast ? (
+        <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />
+      ) : null}
 
-      <main className="pt-28 pb-16 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
-        <h1 className="text-3xl font-bold text-slate-900 mb-8">Mi carrito</h1>
+      <div className="mx-auto max-w-[1180px] px-4 pb-14 pt-3 sm:px-6 lg:px-8">
+        <nav aria-label="Breadcrumb" className="text-[13px] text-[#8b93a1]">
+          <ol className="flex flex-wrap items-center gap-1.5">
+            <li>
+              <Link href="/landing" className="hover:text-[#17245c]">
+                Inicio
+              </Link>
+            </li>
+            <li className="text-[#c4c9d1]">›</li>
+            <li className="font-medium text-[#5b6472]">Carrito de compras</li>
+          </ol>
+        </nav>
+
+        <header className="mt-3 mb-7">
+          <h1 className="text-[32px] font-bold leading-tight text-[#17245c]">Carrito de compras</h1>
+          <p className="mt-1.5 text-[15px] text-[#6b7280]">
+            Revisa los productos y servicios que has seleccionado.
+          </p>
+        </header>
 
         {loading ? (
           <p className="text-slate-500">Cargando carrito...</p>
         ) : items.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">
-            <p className="text-slate-600 mb-6">Tu carrito está vacío.</p>
-            <Button asChild className="bg-blue-700 hover:bg-blue-800">
-              <Link href="/productos">Ver catálogo</Link>
+          <div className="rounded-xl border border-[#e3e7ee] bg-white px-6 py-16 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#f3f4f6] text-slate-400">
+              <ShoppingBag className="h-8 w-8" />
+            </div>
+            <h2 className="text-xl font-bold text-[#17245c]">Tu carrito está vacío</h2>
+            <p className="mt-2 text-[#6b7280]">
+              Agrega productos o servicios desde el catálogo para continuar con tu pedido.
+            </p>
+            <Button asChild className="mt-6 bg-[#17245c] font-bold hover:bg-[#111a45]">
+              <Link href="/productos">Ir al catálogo</Link>
             </Button>
           </div>
         ) : (
-          <div className="grid lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-4">
-              {items.map((item) => {
-                const line = getCartLineItem(item);
-                if (!line) return null;
+          <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-10">
+            <section>
+              <CartItemsTable
+                items={items}
+                updatingId={updating}
+                onQuantityChange={handleQuantity}
+                onRemove={handleRemove}
+              />
 
-                return (
-                  <div
-                    key={item.id}
-                    className="bg-white rounded-2xl border border-slate-100 p-4 flex gap-4 items-center"
-                  >
-                    <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-slate-100 shrink-0">
-                      {getUploadImageUrl(line.imageUrl) ? (
-                        <Image
-                          src={getUploadImageUrl(line.imageUrl)!}
-                          alt={line.name}
-                          fill
-                          className="object-cover"
-                          sizes="80px"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">
-                          Sin imagen
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="inline-flex px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-semibold text-slate-600 mb-1">
-                        {line.label}
-                      </span>
-                      <h3 className="font-semibold text-slate-900 truncate">
-                        {line.name}
-                      </h3>
-                      <p className="text-blue-700 font-medium">
-                        {formatPrice(line.price)}
-                      </p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <button
-                          type="button"
-                          onClick={() => handleQuantity(item.id, item.quantity - 1)}
-                          disabled={updating === item.id || item.quantity <= 1}
-                          className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 disabled:opacity-50"
-                        >
-                          <Minus className="w-4 h-4" />
-                        </button>
-                        <span className="w-8 text-center font-medium">{item.quantity}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleQuantity(item.id, item.quantity + 1)}
-                          disabled={
-                            updating === item.id ||
-                            (line.stockLimit !== null && item.quantity >= line.stockLimit)
-                          }
-                          className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 disabled:opacity-50"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-slate-900">
-                        {formatPrice(Number(line.price) * item.quantity)}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => handleRemove(item.id)}
-                        disabled={updating === item.id}
-                        className="mt-2 text-red-500 hover:text-red-700 p-1"
-                        aria-label="Eliminar"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+              <div className="mt-6 flex flex-col gap-3 border-t border-[#e8ebf0] pt-6 sm:flex-row sm:items-center sm:justify-between">
+                <button
+                  type="button"
+                  onClick={handleClearCart}
+                  disabled={clearing}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-[#cfd6e3] bg-white px-5 text-[14px] font-semibold text-[#17245c] transition hover:bg-[#f8fafc] disabled:opacity-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Vaciar carrito
+                </button>
+                <Link
+                  href="/productos"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-[#cfd6e3] bg-white px-5 text-[14px] font-semibold text-[#17245c] transition hover:bg-[#f8fafc]"
+                >
+                  Seguir comprando
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </section>
 
-            <div className="bg-white rounded-2xl border border-slate-100 p-6 h-fit">
-              <h2 className="text-lg font-semibold text-slate-900 mb-4">Resumen</h2>
-              <div className="flex justify-between text-slate-600 mb-2">
-                <span>Items ({cart?.itemCount})</span>
-                <span>{formatPrice(cart?.total ?? 0)}</span>
+            {breakdown ? (
+              <div className="lg:sticky lg:top-[calc(var(--store-header-height,120px)+1.25rem)]">
+                <CartOrderSummary breakdown={breakdown} />
               </div>
-              <div className="border-t border-slate-100 pt-4 mt-4 flex justify-between font-bold text-lg">
-                <span>Total</span>
-                <span className="text-blue-700">{formatPrice(cart?.total ?? 0)}</span>
-              </div>
-              <Button asChild className="w-full mt-6 bg-blue-700 hover:bg-blue-800 h-11">
-                <Link href="/checkout">Proceder al checkout</Link>
-              </Button>
-            </div>
+            ) : null}
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </StorePageShell>
   );
 }

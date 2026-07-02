@@ -125,6 +125,7 @@ export function BlockCard({ block, showOrderId = false }: BlockCardProps) {
             <div className="flex flex-wrap items-center gap-2 mb-1">
               <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-900 text-white text-xs font-bold font-mono">
                 #{block.blockIndex}
+                {block.blockIndex === 0 ? " · Génesis" : ""}
               </span>
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${styles.badge}`}

@@ -3,9 +3,15 @@ import Image from "next/image";
 
 interface AuthLayoutProps {
   children: React.ReactNode;
+  title?: string;
+  subtitle?: string;
 }
 
-const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
+const AuthLayout: React.FC<AuthLayoutProps> = ({
+  children,
+  title = "Bienvenido de nuevo",
+  subtitle = "Inicia sesión para continuar",
+}) => {
   return (
     <div className="min-h-screen grid bg-white md:grid-cols-2">
       {/* Panel izquierdo — branding */}
@@ -58,13 +64,9 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
             </div>
 
             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-[#001a3a]">
-                Bienvenido de nuevo
-              </h2>
+              <h2 className="text-2xl font-bold text-[#001a3a]">{title}</h2>
               <div className="mx-auto mt-2 mb-3 h-0.5 w-10 bg-red-600 rounded-full" />
-              <p className="text-sm text-slate-500">
-                Inicia sesión para continuar
-              </p>
+              <p className="text-sm text-slate-500">{subtitle}</p>
             </div>
             {children}
           </div>

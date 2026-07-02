@@ -12,7 +12,13 @@ function LoginContent() {
     const handleLogin = (email: string, password: string) =>
         login(email, password, redirectTo);
 
-    return <LoginTemplate onLogin={handleLogin} loading={loading} />;
+    return (
+        <LoginTemplate
+            onLogin={handleLogin}
+            loading={loading}
+            redirectTo={redirectTo}
+        />
+    );
 }
 
 const LoginPage = () => (

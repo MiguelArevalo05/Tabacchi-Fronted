@@ -1,5 +1,5 @@
-import MyOrdersPage from "@/features/cart/components/MyOrdersPage";
+import { redirect } from "next/navigation";
 
 export default function MyOrdersRoutePage() {
-  return <MyOrdersPage />;
+  redirect("/cuenta/ordenes");
 }

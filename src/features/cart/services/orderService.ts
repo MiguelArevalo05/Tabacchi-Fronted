@@ -1,10 +1,12 @@
 import api from "@/lib/api";
+import { buildOrderFormData } from "@/lib/formData";
 import type {
   CreateOrderRequest,
   EcommerceOrder,
   OrderStatus,
   PaginatedResponse,
   PaginationQuery,
+  ReviewPaymentProofRequest,
   UpdateOrderStatusRequest,
 } from "@/features/products/types/ecommerce";
 
@@ -13,6 +15,12 @@ const API_URL = "/orders";
 export const createOrder = async (
   data: CreateOrderRequest
 ): Promise<EcommerceOrder> => {
+  if (data.paymentProof) {
+    const formData = await buildOrderFormData(data);
+    const response = await api.post<EcommerceOrder>(API_URL, formData);
+    return response.data;
+  }
+
   const response = await api.post<EcommerceOrder>(API_URL, data);
   return response.data;
 };
@@ -55,6 +63,17 @@ export const updateOrderStatus = async (
 ): Promise<EcommerceOrder> => {
   const response = await api.patch<EcommerceOrder>(
     `${API_URL}/${id}/status`,
+    data
+  );
+  return response.data;
+};
+
+export const reviewPaymentProof = async (
+  id: string,
+  data: ReviewPaymentProofRequest
+): Promise<EcommerceOrder> => {
+  const response = await api.patch<EcommerceOrder>(
+    `${API_URL}/${id}/payment-proof/review`,
     data
   );
   return response.data;

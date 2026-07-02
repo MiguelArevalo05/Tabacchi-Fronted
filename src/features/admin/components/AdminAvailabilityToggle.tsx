@@ -24,9 +24,10 @@ export function AdminAvailabilityToggle({
         role="switch"
         aria-checked={isActive}
         aria-label={`Cambiar a ${isActive ? inactiveLabel : activeLabel}`}
+        aria-busy={loading}
         disabled={loading}
         onClick={() => onToggle(!isActive)}
-        className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${
+        className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:cursor-wait ${
           isActive ? "bg-emerald-500" : "bg-slate-300"
         }`}
       >
@@ -41,7 +42,7 @@ export function AdminAvailabilityToggle({
           isActive ? "text-emerald-700" : "text-slate-500"
         }`}
       >
-        {loading ? "Guardando…" : label}
+        {label}
       </span>
     </div>
   );

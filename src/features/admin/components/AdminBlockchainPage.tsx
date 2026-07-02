@@ -11,9 +11,8 @@ import {
   AdminModal,
 } from "@/features/admin/components/AdminModal";
 import { Toast } from "@/components/ui/toast";
-import { BlockCard } from "@/features/admin/blockchain/components/BlockCard";
-import { BlockchainValidation } from "@/features/admin/blockchain/components/BlockchainValidation";
 import { OrderAuditCard } from "@/features/admin/blockchain/components/OrderAuditCard";
+import { BlockchainValidation } from "@/features/admin/blockchain/components/BlockchainValidation";
 import {
   deleteOrderBlockchainHistory,
   getBlockchain,
@@ -89,19 +88,17 @@ export default function BlockchainPage() {
   };
 
   const stats = useMemo(() => {
-    const orderBlocks = blocks.filter((b) => b.orderId !== "GENESIS");
-    const uniqueOrders = new Set(orderBlocks.map((b) => b.orderId)).size;
+    const uniqueOrders = new Set(blocks.map((b) => b.orderId)).size;
     const byAction = blocks.reduce<Record<string, number>>((acc, b) => {
       acc[b.action] = (acc[b.action] ?? 0) + 1;
       return acc;
     }, {});
-    return { orderBlocks: orderBlocks.length, uniqueOrders, byAction };
+    return { orderBlocks: blocks.length, uniqueOrders, byAction };
   }, [blocks]);
 
   const orderAudits = useMemo(() => {
     const groups = new Map<string, BlockchainBlock[]>();
     for (const block of blocks) {
-      if (block.orderId === "GENESIS") continue;
       const existing = groups.get(block.orderId) ?? [];
       existing.push(block);
       groups.set(block.orderId, existing);
@@ -122,11 +119,6 @@ export default function BlockchainPage() {
       );
   }, [blocks]);
 
-  const genesisBlock = useMemo(
-    () => blocks.find((b) => b.orderId === "GENESIS" || b.action === "GENESIS"),
-    [blocks],
-  );
-
   return (
     <div className="max-w-4xl space-y-8">
       {toast && (
@@ -137,7 +129,7 @@ export default function BlockchainPage() {
       <AdminPageHeader
         icon={Link2}
         title="Blockchain de auditoría"
-        description="Cada orden tiene su propio registro inmutable e independiente"
+        description="Cada orden mantiene su propia cadena de bloques, iniciando en el bloque génesis (CREATED)"
         actions={
           <button
             type="button"
@@ -255,26 +247,6 @@ export default function BlockchainPage() {
         )}
       </section>
 
-      {/* Bloque génesis */}
-      {!loading && genesisBlock && (
-        <section>
-          <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">
-            Bloque génesis
-          </h2>
-          <AdminCard>
-            <div className="px-5 py-4 border-b border-slate-100 bg-violet-50/60 rounded-t-xl">
-              <p className="text-sm font-semibold text-violet-900">Punto de origen del sistema</p>
-              <p className="text-xs text-violet-500 mt-0.5">
-                Bloque compartido que ancla toda la cadena de auditoría
-              </p>
-            </div>
-            <div className="p-5">
-              <BlockCard block={genesisBlock} />
-            </div>
-          </AdminCard>
-        </section>
-      )}
-
       {deleteHistoryTarget && (
         <AdminModal
           title="Eliminar historial de auditoría"
@@ -297,7 +269,7 @@ export default function BlockchainPage() {
           <p className="text-slate-600 text-sm">
             Se eliminarán todos los bloques de auditoría de la orden{" "}
             <span className="font-mono text-slate-800">{deleteHistoryTarget}</span>.
-            La cadena se reparará automáticamente. La orden en el sistema no se
+            Solo se borra el historial de esa orden. La orden en el sistema no se
             borra con esta acción.
           </p>
         </AdminModal>

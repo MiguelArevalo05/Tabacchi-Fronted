@@ -23,12 +23,15 @@ import {
 import { AdminAvailabilityToggle } from "@/features/admin/components/AdminAvailabilityToggle";
 import { ProductAvailabilityField } from "@/features/admin/components/ProductAvailabilityField";
 import { getUploadImageUrl } from "@/lib/utils";
+import { getCategoriesAdmin } from "@/features/categories/services/categoryService";
+import type { Category } from "@/features/categories/types/category";
 import {
   createProduct,
   deleteProduct,
   getProductsAdmin,
   updateProduct,
   updateProductAvailability,
+  updateProductIgv,
 } from "@/features/products/services/productService";
 import type { Product, ProductFormData } from "@/features/products/types/ecommerce";
 import {
@@ -45,11 +48,20 @@ const emptyForm: ProductFormData = {
   discountPercentage: null,
   badgeLabel: "",
   badgeColor: null,
+  categoryId: null,
+  category: "",
+  rating: 5,
+  reviewCount: 0,
+  technicalSpecs: "",
+  documentation: "",
+  usageRecommendations: "",
+  warrantyMonths: 12,
   stock: 0,
   isActive: true,
 };
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const MAX_GALLERY_IMAGES = 10;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 export default function ProductsAdminPage() {
@@ -62,10 +74,15 @@ export default function ProductsAdminPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
+  const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
+  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
+  const [retainedGalleryUrls, setRetainedGalleryUrls] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [togglingIgvId, setTogglingIgvId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const fetchProducts = async () => {
     try {
@@ -81,6 +98,9 @@ export default function ProductsAdminPage() {
 
   useEffect(() => {
     fetchProducts();
+    getCategoriesAdmin({ limit: 100 })
+      .then((res) => setCategories(res.data))
+      .catch(() => setCategories([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -88,6 +108,19 @@ export default function ProductsAdminPage() {
     setImageFile(null);
     setImagePreview(null);
     setCurrentImageUrl(null);
+    setGalleryFiles([]);
+    setGalleryPreviews([]);
+    setRetainedGalleryUrls([]);
+  };
+
+  const validateImageFile = (file: File): string | null => {
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return "Solo JPG, PNG, WEBP o GIF.";
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      return "La imagen no puede superar 5 MB.";
+    }
+    return null;
   };
 
   const openCreate = () => {
@@ -111,12 +144,21 @@ export default function ProductsAdminPage() {
       discountPercentage: product.discountPercentage ?? null,
       badgeLabel: badge?.label ?? "",
       badgeColor: badge?.color ?? null,
+      categoryId: product.categoryId ?? null,
+      category: product.category ?? "",
+      rating: product.rating === undefined ? 5 : Number(product.rating),
+      reviewCount: product.reviewCount ?? 0,
+      technicalSpecs: product.technicalSpecs ?? "",
+      documentation: product.documentation ?? "",
+      usageRecommendations: product.usageRecommendations ?? "",
+      warrantyMonths: product.warrantyMonths ?? 12,
       stock: product.stock,
       isActive: product.isActive,
     });
     setEditingId(product.id);
     resetImageState();
     setCurrentImageUrl(getUploadImageUrl(product.imageUrl));
+    setRetainedGalleryUrls(product.additionalImages ?? []);
     setShowModal(true);
   };
 
@@ -124,17 +166,60 @@ export default function ProductsAdminPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      setToast({ type: "error", message: "Solo JPG, PNG, WEBP o GIF." });
-      return;
-    }
-    if (file.size > MAX_IMAGE_SIZE) {
-      setToast({ type: "error", message: "La imagen no puede superar 5 MB." });
+    const error = validateImageFile(file);
+    if (error) {
+      setToast({ type: "error", message: error });
       return;
     }
 
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
+  };
+
+  const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+
+    const totalCount = retainedGalleryUrls.length + galleryFiles.length + files.length;
+    if (totalCount > MAX_GALLERY_IMAGES) {
+      setToast({
+        type: "error",
+        message: `Máximo ${MAX_GALLERY_IMAGES} imágenes en el carrusel.`,
+      });
+      e.target.value = "";
+      return;
+    }
+
+    const validFiles: File[] = [];
+    for (const file of files) {
+      const error = validateImageFile(file);
+      if (error) {
+        setToast({ type: "error", message: error });
+        e.target.value = "";
+        return;
+      }
+      validFiles.push(file);
+    }
+
+    setGalleryFiles((prev) => [...prev, ...validFiles]);
+    setGalleryPreviews((prev) => [
+      ...prev,
+      ...validFiles.map((file) => URL.createObjectURL(file)),
+    ]);
+    e.target.value = "";
+  };
+
+  const removeRetainedGalleryImage = (url: string) => {
+    setRetainedGalleryUrls((prev) => prev.filter((item) => item !== url));
+  };
+
+  const removeNewGalleryImage = (index: number) => {
+    setGalleryFiles((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+    setGalleryPreviews((prev) => {
+      const preview = prev[index];
+      if (preview) URL.revokeObjectURL(preview);
+      return prev.filter((_, itemIndex) => itemIndex !== index);
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -151,10 +236,15 @@ export default function ProductsAdminPage() {
     setSaving(true);
     try {
       if (editingId) {
-        await updateProduct(editingId, form, imageFile);
+        await updateProduct(
+          editingId,
+          { ...form, retainedAdditionalImages: retainedGalleryUrls },
+          imageFile,
+          galleryFiles
+        );
         setToast({ type: "success", message: "Producto actualizado." });
       } else {
-        await createProduct(form, imageFile!);
+        await createProduct(form, imageFile!, galleryFiles);
         setToast({ type: "success", message: "Producto creado." });
       }
       setShowModal(false);
@@ -168,9 +258,13 @@ export default function ProductsAdminPage() {
   };
 
   const handleToggleAvailability = async (product: Product) => {
+    const nextValue = !product.isActive;
     setTogglingId(product.id);
+    setProducts((prev) =>
+      prev.map((p) => (p.id === product.id ? { ...p, isActive: nextValue } : p))
+    );
     try {
-      const updated = await updateProductAvailability(product.id, !product.isActive);
+      const updated = await updateProductAvailability(product.id, nextValue);
       setProducts((prev) =>
         prev.map((p) => (p.id === product.id ? { ...p, ...updated } : p))
       );
@@ -179,9 +273,45 @@ export default function ProductsAdminPage() {
         message: updated.isActive ? "Producto disponible." : "Producto oculto en tienda.",
       });
     } catch {
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, isActive: product.isActive } : p))
+      );
       setToast({ type: "error", message: "No se pudo cambiar la disponibilidad." });
     } finally {
       setTogglingId(null);
+    }
+  };
+
+  const handleToggleIgv = async (product: Product) => {
+    const nextValue = !(product.priceIncludesIgv ?? true);
+    setTogglingIgvId(product.id);
+    setProducts((prev) =>
+      prev.map((p) =>
+        p.id === product.id ? { ...p, priceIncludesIgv: nextValue } : p
+      )
+    );
+    try {
+      const updated = await updateProductIgv(product.id, nextValue);
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, ...updated } : p))
+      );
+      setToast({
+        type: "success",
+        message: updated.priceIncludesIgv
+          ? "El precio ahora incluye IGV."
+          : "El precio ya no incluye IGV.",
+      });
+    } catch {
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === product.id
+            ? { ...p, priceIncludesIgv: product.priceIncludesIgv ?? true }
+            : p
+        )
+      );
+      setToast({ type: "error", message: "No se pudo actualizar el IGV." });
+    } finally {
+      setTogglingIgvId(null);
     }
   };
 
@@ -198,6 +328,7 @@ export default function ProductsAdminPage() {
 
   const previewSrc = imagePreview || currentImageUrl;
   const selectedBadge = getProductBadgeOption(form.badgeLabel, form.badgeColor);
+  const galleryCount = retainedGalleryUrls.length + galleryFiles.length;
 
   const handleBadgeChange = (label: string) => {
     const option = PRODUCT_BADGE_OPTIONS.find((item) => item.label === label);
@@ -243,15 +374,16 @@ export default function ProductsAdminPage() {
               <AdminTh>Precio</AdminTh>
               <AdminTh>Card</AdminTh>
               <AdminTh>Stock</AdminTh>
+              <AdminTh>IGV</AdminTh>
               <AdminTh>Estado</AdminTh>
               <AdminTh align="right">Acciones</AdminTh>
             </tr>
           </AdminTableHead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
-              <AdminEmptyState message="Cargando productos..." colSpan={7} />
+              <AdminEmptyState message="Cargando productos..." colSpan={8} />
             ) : products.length === 0 ? (
-              <AdminEmptyState message="No hay productos registrados" colSpan={7} />
+              <AdminEmptyState message="No hay productos registrados" colSpan={8} />
             ) : (
               products.map((p) => {
                 const img = getUploadImageUrl(p.imageUrl);
@@ -287,6 +419,15 @@ export default function ProductsAdminPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3.5 text-slate-700">{p.stock}</td>
+                    <td className="px-4 py-3.5">
+                      <AdminAvailabilityToggle
+                        isActive={p.priceIncludesIgv ?? true}
+                        loading={togglingIgvId === p.id}
+                        activeLabel="Incluido"
+                        inactiveLabel="Sin IGV"
+                        onToggle={() => handleToggleIgv(p)}
+                      />
+                    </td>
                     <td className="px-4 py-3.5">
                       <AdminAvailabilityToggle
                         isActive={p.isActive}
@@ -462,25 +603,217 @@ export default function ProductsAdminPage() {
               </div>
             </section>
 
+            <section className="rounded-2xl border border-slate-100 bg-white p-4">
+              <h3 className="text-sm font-semibold text-slate-900">Detalle de producto</h3>
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Categoría</label>
+                  <select
+                    value={form.categoryId ?? ""}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        categoryId: e.target.value || null,
+                        category:
+                          categories.find((item) => item.id === e.target.value)?.name ?? "",
+                      }))
+                    }
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                  >
+                    <option value="">Sin categoría</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Garantía (meses)</label>
+                  <input
+                    type="number"
+                    value={String(form.warrantyMonths ?? "")}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        warrantyMonths: e.target.value === "" ? null : Number(e.target.value),
+                      }))
+                    }
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                    min={0}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Calificación (0-5)</label>
+                  <input
+                    type="number"
+                    value={String(form.rating ?? "")}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        rating: e.target.value === "" ? null : Number(e.target.value),
+                      }))
+                    }
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                    min={0}
+                    max={5}
+                    step="0.1"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Reseñas</label>
+                  <input
+                    type="number"
+                    value={String(form.reviewCount ?? "")}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        reviewCount: e.target.value === "" ? null : Number(e.target.value),
+                      }))
+                    }
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                    min={0}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1">Especificaciones técnicas</label>
+                  <textarea
+                    value={form.technicalSpecs ?? ""}
+                    onChange={(e) => setForm((prev) => ({ ...prev, technicalSpecs: e.target.value }))}
+                    className="min-h-24 w-full resize-y px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                    placeholder="Una línea por especificación"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1">Documentación y certificados</label>
+                  <textarea
+                    value={form.documentation ?? ""}
+                    onChange={(e) => setForm((prev) => ({ ...prev, documentation: e.target.value }))}
+                    className="min-h-24 w-full resize-y px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                    placeholder="Una línea por documento"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1">Recomendaciones de uso</label>
+                  <textarea
+                    value={form.usageRecommendations ?? ""}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, usageRecommendations: e.target.value }))
+                    }
+                    className="min-h-24 w-full resize-y px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                    placeholder="Una línea por recomendación"
+                  />
+                </div>
+              </div>
+            </section>
+
             <section className="grid gap-5 lg:grid-cols-[1fr_1.15fr]">
-              <div className="rounded-2xl border border-slate-100 bg-white p-4">
-                <label className="block text-sm font-semibold text-slate-900">
-                  Imagen {editingId ? "(opcional, deja vacío para mantener la actual)" : "(obligatoria)"}
-                </label>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  onChange={handleImageChange}
-                  className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-blue-700"
-                />
-                <p className="text-xs text-slate-400 mt-2">
-                  JPG, PNG, WEBP o GIF. Máx. 5 MB. Se subirá en formato WEBP.
-                </p>
-                {previewSrc && (
-                  <div className="relative mt-4 h-36 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
-                    <Image src={previewSrc} alt="Vista previa" fill className="object-contain p-3" sizes="280px" unoptimized={!!imagePreview} />
-                  </div>
-                )}
+              <div className="space-y-5">
+                <div className="rounded-2xl border border-slate-100 bg-white p-4">
+                  <label className="block text-sm font-semibold text-slate-900">
+                    Imagen principal{" "}
+                    {editingId ? "(opcional, deja vacío para mantener la actual)" : "(obligatoria)"}
+                  </label>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Se usa en el catálogo y como primera imagen del carrusel.
+                  </p>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    onChange={handleImageChange}
+                    className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-blue-700"
+                  />
+                  <p className="mt-2 text-xs text-slate-400">
+                    JPG, PNG, WEBP o GIF. Máx. 5 MB. Se subirá en formato WEBP.
+                  </p>
+                  {previewSrc && (
+                    <div className="relative mt-4 h-36 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                      <Image
+                        src={previewSrc}
+                        alt="Vista previa principal"
+                        fill
+                        className="object-contain p-3"
+                        sizes="280px"
+                        unoptimized={!!imagePreview}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-2xl border border-slate-100 bg-white p-4">
+                  <label className="block text-sm font-semibold text-slate-900">
+                    Galería del carrusel
+                  </label>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Imágenes adicionales para la vista de detalle del producto. Máximo{" "}
+                    {MAX_GALLERY_IMAGES} fotos.
+                  </p>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    multiple
+                    onChange={handleGalleryChange}
+                    disabled={galleryCount >= MAX_GALLERY_IMAGES}
+                    className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-blue-700 disabled:opacity-50"
+                  />
+                  <p className="mt-2 text-xs text-slate-500">
+                    {galleryCount}/{MAX_GALLERY_IMAGES} imágenes en el carrusel
+                  </p>
+
+                  {(retainedGalleryUrls.length > 0 || galleryPreviews.length > 0) && (
+                    <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
+                      {retainedGalleryUrls.map((url) => {
+                        const displayUrl = getUploadImageUrl(url);
+                        if (!displayUrl) return null;
+
+                        return (
+                          <div
+                            key={url}
+                            className="relative aspect-square overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
+                          >
+                            <Image
+                              src={displayUrl}
+                              alt="Imagen del carrusel"
+                              fill
+                              className="object-cover"
+                              sizes="96px"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeRetainedGalleryImage(url)}
+                              className="absolute right-1 top-1 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white"
+                            >
+                              Quitar
+                            </button>
+                          </div>
+                        );
+                      })}
+
+                      {galleryPreviews.map((preview, index) => (
+                        <div
+                          key={preview}
+                          className="relative aspect-square overflow-hidden rounded-xl border border-blue-200 bg-blue-50"
+                        >
+                          <Image
+                            src={preview}
+                            alt={`Nueva imagen ${index + 1}`}
+                            fill
+                            className="object-cover"
+                            sizes="96px"
+                            unoptimized
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeNewGalleryImage(index)}
+                            className="absolute right-1 top-1 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white"
+                          >
+                            Quitar
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <ProductAvailabilityField

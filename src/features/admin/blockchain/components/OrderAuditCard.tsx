@@ -123,6 +123,9 @@ export function OrderAuditCard({
               <p className="text-sm font-medium text-slate-900">
                 Historial de bloques de esta orden
               </p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Cada orden inicia en el bloque #0 (génesis) con hash anterior GENESIS.
+              </p>
             </div>
             <BlockchainTimeline
               blocks={blocks}

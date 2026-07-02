@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Store,
   Package,
+  FolderOpen,
   Wrench,
   ShoppingBag,
   Settings,
@@ -20,6 +21,7 @@ import {
   ChevronDown,
   ExternalLink,
   Link2,
+  Wallet,
 } from "lucide-react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -61,6 +63,13 @@ const menuItems: MenuItem[] = [
         action: "read",
       },
       {
+        path: "/admin/categorias",
+        title: "Categorías",
+        icon: <FolderOpen className="w-4 h-4" />,
+        module: "product",
+        action: "read",
+      },
+      {
         path: "/admin/servicios",
         title: "Servicios",
         icon: <Wrench className="w-4 h-4" />,
@@ -73,6 +82,13 @@ const menuItems: MenuItem[] = [
         icon: <ShoppingBag className="w-4 h-4" />,
         module: "order",
         action: "read",
+      },
+      {
+        path: "/admin/pagos",
+        title: "Pagos Yape/Plin",
+        icon: <Wallet className="w-4 h-4" />,
+        module: "order",
+        action: "update",
       },
       {
         path: "/admin/blockchain",

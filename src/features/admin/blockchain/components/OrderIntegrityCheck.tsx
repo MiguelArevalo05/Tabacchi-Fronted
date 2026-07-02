@@ -97,7 +97,7 @@ export function OrderIntegrityCheck({ orderId }: OrderIntegrityCheckProps) {
             {chainBroken && (
               <p className="text-xs text-red-700 mt-2 flex items-center gap-1.5">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                La cadena de bloques también está comprometida.
+                La cadena de bloques de esta orden está comprometida.
               </p>
             )}
 

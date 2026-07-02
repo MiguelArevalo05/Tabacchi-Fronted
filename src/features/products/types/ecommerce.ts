@@ -12,10 +12,28 @@ export enum OrderStatus {
   CANCELLED = "cancelled",
 }
 
+export enum PaymentProofStatus {
+  NOT_REQUIRED = "not_required",
+  PENDING = "pending",
+  SUBMITTED = "submitted",
+  APPROVED = "approved",
+  REJECTED = "rejected",
+}
+
+export const PAYMENT_PROOF_STATUS_LABELS: Record<PaymentProofStatus, string> = {
+  [PaymentProofStatus.NOT_REQUIRED]: "No aplica",
+  [PaymentProofStatus.PENDING]: "Pendiente de comprobante",
+  [PaymentProofStatus.SUBMITTED]: "Comprobante enviado",
+  [PaymentProofStatus.APPROVED]: "Pago verificado",
+  [PaymentProofStatus.REJECTED]: "Comprobante rechazado",
+};
+
 export interface PaginationQuery {
   page?: number;
   limit?: number;
   search?: string;
+  categorySlug?: string;
+  categoryId?: string;
 }
 
 export interface PaginationMeta {
@@ -40,8 +58,18 @@ export interface Product {
   badgeLabel?: string | null;
   badgeColor?: ProductBadgeColor | null;
   imageUrl: string | null;
+  additionalImages?: string[];
+  categoryId?: string | null;
+  category?: string | null;
+  rating?: number | string;
+  reviewCount?: number;
+  technicalSpecs?: string | null;
+  documentation?: string | null;
+  usageRecommendations?: string | null;
+  warrantyMonths?: number;
   stock: number;
   isActive: boolean;
+  priceIncludesIgv?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -54,6 +82,15 @@ export interface ProductFormData {
   discountPercentage?: number | null;
   badgeLabel?: string | null;
   badgeColor?: ProductBadgeColor | null;
+  categoryId?: string | null;
+  category?: string;
+  rating?: number | null;
+  reviewCount?: number | null;
+  technicalSpecs?: string | null;
+  documentation?: string | null;
+  usageRecommendations?: string | null;
+  warrantyMonths?: number | null;
+  retainedAdditionalImages?: string[];
   stock?: number | null;
   isActive?: boolean;
 }
@@ -95,12 +132,25 @@ export interface CartItem {
   updatedAt: string;
 }
 
+export interface CartBreakdown {
+  productsSubtotal: number;
+  servicesSubtotal: number;
+  productLineCount: number;
+  serviceLineCount: number;
+  subtotal: number;
+  igv: number;
+  total: number;
+  hasIgv: boolean;
+  hasExcludedIgvProducts: boolean;
+}
+
 export interface Cart {
   id: string;
   userId: string;
   items: CartItem[];
   total: number;
   itemCount: number;
+  breakdown: CartBreakdown;
   createdAt: string;
   updatedAt: string;
 }
@@ -125,6 +175,7 @@ export interface OrderItem {
   serviceId: string | null;
   service: ServiceOffering | null;
   productName: string;
+  itemDescription?: string | null;
   quantity: number;
   unitPrice: number | string;
   subtotal: number | string;
@@ -141,9 +192,20 @@ export interface EcommerceOrder {
   };
   status: OrderStatus;
   total: number | string;
+  subtotal?: number | string;
+  igv?: number | string;
+  customerFullName?: string | null;
+  customerEmail?: string | null;
+  customerPhone?: string | null;
+  customerDocumentType?: string | null;
+  customerDocumentNumber?: string | null;
   notes: string | null;
   shippingAddress: string | null;
   contactPhone: string | null;
+  paymentMethod?: string | null;
+  paymentProofUrl?: string | null;
+  paymentProofStatus?: PaymentProofStatus | string | null;
+  paymentProofReviewNote?: string | null;
   items: OrderItem[];
   createdAt: string;
   updatedAt: string;
@@ -153,6 +215,13 @@ export interface CreateOrderRequest {
   notes?: string;
   shippingAddress?: string;
   contactPhone?: string;
+  paymentMethod?: string;
+  paymentProof?: File | null;
+}
+
+export interface ReviewPaymentProofRequest {
+  action: "approve" | "reject";
+  note?: string;
 }
 
 export interface UpdateOrderStatusRequest {
@@ -209,6 +278,11 @@ export const PRODUCT_BADGE_OPTIONS: ProductBadgeOption[] = [
     label: "Liquidación",
     color: "red",
     className: "bg-red-100 text-red-700",
+  },
+  {
+    label: "MÁS VENDIDO",
+    color: "red",
+    className: "bg-red-50 text-red-600 ring-1 ring-red-100",
   },
 ];
 
@@ -285,6 +359,26 @@ export const SERVICE_AVAILABILITY_CONFIG: Record<
 
 export function isServicePurchasable(item: { isActive: boolean }): boolean {
   return item.isActive;
+}
+
+export function getProductImages(product: Product): string[] {
+  const main = product.imageUrl ? [product.imageUrl] : [];
+  const extra = product.additionalImages ?? [];
+  return [...main, ...extra.filter((url) => url && url !== product.imageUrl)];
+}
+
+export function getStockLabel(stock: number): string {
+  if (stock <= 0) return "Sin stock";
+  if (stock > 50) return "Más de 50 unidades disponibles";
+  return `${stock} unidad${stock === 1 ? "" : "es"} disponible${stock === 1 ? "" : "s"}`;
+}
+
+export function parseProductTextSections(value?: string | null): string[] {
+  if (!value?.trim()) return [];
+  return value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
 }
 
 export function getCartLineItem(item: CartItem) {

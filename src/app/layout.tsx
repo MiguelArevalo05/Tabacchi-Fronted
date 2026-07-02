@@ -1,8 +1,6 @@
-'use client';
+import { Geist, Geist_Mono } from "next/font/google";
 
-import { AuthProvider } from '@/features/auth/providers/AuthProvider';
-import { CartProvider } from '@/features/cart/providers/CartProvider';
-import { Geist, Geist_Mono} from "next/font/google";
+import { Providers } from "@/components/providers/Providers";
 import "@/styles/globals.css";
 
 const geistSans = Geist({
@@ -21,15 +19,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <AuthProvider>
-          <CartProvider>
-            {children}
-          </CartProvider>
-        </AuthProvider>
+    <html lang="es">
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

@@ -11,7 +11,7 @@ export async function createUser(data: {
   password: string;
   isSuperAdmin: boolean;
 }) {
-  const response = await api.post("/auth/register", data);
+  const response = await api.post("/auth/users", data);
   return response.data;
 }
 

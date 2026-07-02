@@ -9,12 +9,14 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 const PAGE_TITLES: Record<string, string> = {
   "/admin": "Inicio",
   "/admin/productos": "Productos",
+  "/admin/categorias": "Categorías",
   "/admin/servicios": "Servicios",
   "/admin/ordenes": "Órdenes",
   "/admin/blockchain": "Blockchain",
   "/admin/usuarios": "Usuarios",
   "/admin/perfiles": "Perfiles",
   "/admin/privilegios": "Privilegios",
+  "/admin/pagos": "Pagos Yape / Plin",
 };
 
 export function DashboardTopBar() {

@@ -67,8 +67,9 @@ export const ORDER_DIFFERENCE_LABELS: Record<string, string> = {
 
 export const BLOCKCHAIN_ACTION_LABELS: Record<string, string> = {
   GENESIS: "Génesis",
-  CREATED: "Orden creada",
+  CREATED: "Orden creada (génesis)",
   STATUS_CHANGED: "Cambio de estado",
+  PAYMENT_PROOF_REVIEWED: "Revisión de comprobante",
   DELETED: "Orden eliminada",
 };
 
@@ -85,6 +86,11 @@ export const BLOCKCHAIN_ACTION_STYLES: Record<
     badge: "bg-emerald-100 text-emerald-800 border-emerald-200",
     accent: "border-emerald-500 bg-emerald-50",
     dot: "bg-emerald-500 ring-emerald-100",
+  },
+  PAYMENT_PROOF_REVIEWED: {
+    badge: "bg-amber-100 text-amber-800 border-amber-200",
+    accent: "border-amber-500 bg-amber-50",
+    dot: "bg-amber-500 ring-amber-100",
   },
   STATUS_CHANGED: {
     badge: "bg-blue-100 text-blue-800 border-blue-200",
